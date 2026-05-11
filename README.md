@@ -1,872 +1,801 @@
-drone-detector/data/exports/reports/README.md - Reports Exports Documentation
+drone-detector/data/exports/ml/README.md - ML Training Data Exports Documentation
 
 markdown
-# Reports Exports Directory
+# ML Training Data Exports Directory
 
-This directory contains generated reports from the Drone Detection System, including daily summaries, weekly trends, monthly analytics, incident reports, and custom analysis reports. These reports provide comprehensive insights into drone detection activities, threat patterns, and system performance.
+This directory contains machine learning training data exports from the Drone Detection System. These exports include feature vectors, labeled datasets, model evaluation results, and training artifacts used for developing and improving drone classification models.
 
 ## Directory Structure
-data/exports/reports/
+data/exports/ml/
 ├── README.md # This file
-├── daily/ # Daily reports
-│ ├── daily_report_20240115.md
-│ ├── daily_report_20240115.pdf
-│ ├── daily_report_20240115.html
-│ ├── daily_report_20240116.md
-│ ├── daily_report_20240116.pdf
-│ └── daily_report_20240116.html
-├── weekly/ # Weekly reports
-│ ├── weekly_report_2024_W03.md
-│ ├── weekly_report_2024_W03.pdf
-│ ├── weekly_report_2024_W03.html
-│ ├── weekly_report_2024_W04.md
-│ └── weekly_report_2024_W04.pdf
-├── monthly/ # Monthly reports
-│ ├── monthly_report_2024_01.md
-│ ├── monthly_report_2024_01.pdf
-│ ├── monthly_report_2024_01.html
-│ ├── monthly_report_2024_01.xlsx
-│ ├── monthly_report_2024_02.md
-│ └── monthly_report_2024_02.pdf
-├── quarterly/ # Quarterly reports
-│ ├── quarterly_report_2024_Q1.md
-│ ├── quarterly_report_2024_Q1.pdf
-│ └── quarterly_report_2024_Q1.pptx
-├── annual/ # Annual reports
-│ ├── annual_report_2023.md
-│ ├── annual_report_2023.pdf
-│ └── annual_report_2023.pptx
-├── incident/ # Incident-specific reports
-│ ├── incident_report_20240115.md
-│ ├── incident_report_20240115.pdf
-│ ├── incident_report_20240115_evidence.zip
-│ ├── incident_report_20240120.md
-│ └── incident_report_20240120.pdf
-├── custom/ # Custom user-generated reports
-│ ├── custom_report_20240115_143022.pdf
-│ ├── custom_report_20240115_143022.json
-│ ├── threat_analysis_20240115.pdf
-│ └── hotspot_analysis_20240115.pdf
-├── templates/ # Report templates
-│ ├── daily_template.md
-│ ├── weekly_template.md
-│ ├── monthly_template.md
-│ ├── incident_template.md
-│ └── custom_template.html
-├── attachments/ # Report attachments
-│ ├── charts/
-│ │ ├── trend_chart_20240115.png
-│ │ ├── distribution_chart_20240115.png
-│ │ └── heatmap_20240115.png
-│ ├── data/
-│ │ ├── detection_data_20240115.csv
-│ │ └── alert_data_20240115.json
-│ └── images/
-│ ├── drone_icon.png
-│ └── logo.png
-└── index.json # Report index and metadata
+├── features/ # Extracted feature datasets
+│ ├── features_20240115.csv # Feature vectors (CSV)
+│ ├── features_20240115.npy # Feature vectors (NumPy)
+│ ├── features_20240115_spectral.csv # Spectral features only
+│ ├── features_20240115_temporal.csv # Temporal features only
+│ ├── features_20240115_modulation.csv # Modulation features only
+│ └── features_20240115_cyclostationary.csv # Cyclostationary features
+├── labeled/ # Labeled datasets
+│ ├── training_set.json # Training dataset
+│ ├── training_set.npy # Training set (NumPy)
+│ ├── validation_set.json # Validation dataset
+│ ├── validation_set.npy # Validation set (NumPy)
+│ ├── test_set.json # Test dataset
+│ └── test_set.npy # Test set (NumPy)
+├── evaluations/ # Model evaluation results
+│ ├── evaluation_20240115.json # Evaluation metrics
+│ ├── evaluation_20240115.html # Evaluation report
+│ ├── confusion_matrix_20240115.png # Confusion matrix
+│ ├── roc_curves_20240115.png # ROC curves
+│ ├── precision_recall_20240115.png # Precision-Recall curves
+│ ├── feature_importance_20240115.png # Feature importance plot
+│ └── learning_curves_20240115.png # Learning curves
+├── models/ # Exported models
+│ ├── classifier_20240115.pkl # Pickled model
+│ ├── classifier_20240115.onnx # ONNX model
+│ ├── scaler_20240115.pkl # Feature scaler
+│ ├── model_metadata_20240115.json # Model metadata
+│ └── model_card_20240115.md # Model documentation
+├── experiments/ # Experiment tracking
+│ ├── experiment_001_baseline.json
+│ ├── experiment_002_augmented.json
+│ ├── experiment_003_feature_selection.json
+│ └── experiment_log.csv
+└── index.json # Export index and metadata
 
 text
 
 ## Naming Convention
 
-Report files follow a consistent naming pattern:
+Export files follow a consistent naming pattern:
 
-| Report Type | Pattern | Example |
+| Export Type | Pattern | Example |
 |-------------|---------|---------|
-| Daily | `daily_report_YYYYMMDD.format` | `daily_report_20240115.pdf` |
-| Weekly | `weekly_report_YYYY_WWW.format` | `weekly_report_2024_W03.pdf` |
-| Monthly | `monthly_report_YYYY_MM.format` | `monthly_report_2024_01.pdf` |
-| Quarterly | `quarterly_report_YYYY_QX.format` | `quarterly_report_2024_Q1.pdf` |
-| Annual | `annual_report_YYYY.format` | `annual_report_2023.pdf` |
-| Incident | `incident_report_YYYYMMDD.format` | `incident_report_20240115.pdf` |
-| Custom | `custom_report_YYYYMMDD_HHMMSS.format` | `custom_report_20240115_143022.pdf` |
+| Feature Export | `features_YYYYMMDD.format` | `features_20240115.csv` |
+| Training Set | `training_set.format` | `training_set.json` |
+| Validation Set | `validation_set.format` | `validation_set.json` |
+| Test Set | `test_set.format` | `test_set.json` |
+| Evaluation | `evaluation_YYYYMMDD.format` | `evaluation_20240115.json` |
+| Model Export | `classifier_YYYYMMDD.format` | `classifier_20240115.pkl` |
+| Experiment | `experiment_XXX_name.json` | `experiment_001_baseline.json` |
+
+## File Formats
+
+### Feature CSV Format (.csv)
+
+Tabular feature data for analysis and visualization.
+
+```csv
+sample_id,drone_type,peak_freq_hz,peak_magnitude_dbm,bandwidth_hz,snr_db,spectral_flatness,modulation_index,evm_rms,label
+sample_001,DJI Mavic 3,2440000000,-45.2,20000000,28.5,0.234,0.85,0.12,1
+sample_002,DJI Mini 3,2440000000,-52.3,10000000,22.1,0.312,0.72,0.15,2
+sample_003,FPV Analog,5800000000,-55.1,8000000,18.5,0.456,1.24,0.08,3
+sample_004,FPV Digital,5800000000,-48.7,20000000,25.3,0.287,0.91,0.11,4
+sample_005,Noise,2440000000,-92.4,0,5.2,0.876,0.00,0.95,0
+Feature NumPy Format (.npy)
+Binary format for fast loading in Python.
 
-## Report Formats
-
-### Markdown Format (.md)
-
-Human-readable text format suitable for version control and editing.
-
-**Structure:**
-```markdown
-# Daily Drone Detection Report
-**Date:** 2024-01-15
-**Generated:** 2024-01-15T23:59:59Z
-**Period:** 2024-01-15 00:00:00 - 2024-01-15 23:59:59
-
-## Executive Summary
-
-During the reporting period, the Drone Detection System recorded **1,247 detections** across **89 unique drones**. 
-
-### Key Metrics
-- **Total Detections:** 1,247
-- **Active Threats:** 342 (27.4%)
-- **High Confidence Detections:** 456
-- **Geofence Violations:** 12
-
-## Detection Statistics
-
-### By Threat Level
-| Threat Level | Count | Percentage |
-|--------------|-------|------------|
-| HIGH | 342 | 27.4% |
-| MEDIUM | 567 | 45.5% |
-| LOW | 338 | 27.1% |
-
-### By Drone Type
-| Drone Type | Count | Percentage |
-|------------|-------|------------|
-| DJI Mavic 3 | 456 | 36.6% |
-| FPV Analog | 234 | 18.8% |
-| DJI Mini 3 | 189 | 15.2% |
-| Autel EVO II | 123 | 9.9% |
-| Skydio 2 | 78 | 6.3% |
-| Unknown | 167 | 13.4% |
-
-## Temporal Analysis
-
-### Peak Detection Hours
-- **16:00 - 17:00:** 234 detections
-- **15:00 - 16:00:** 201 detections
-- **17:00 - 18:00:** 189 detections
-
-### Detections by Day of Week (Weekly Report)
-| Day | Count |
-|-----|-------|
-| Monday | 1,234 |
-| Tuesday | 1,189 |
-| Wednesday | 1,345 |
-| Thursday | 1,456 |
-| Friday | 1,567 |
-| Saturday | 1,234 |
-| Sunday | 1,089 |
-
-## Geographic Distribution
-
-### Top 5 Detection Locations
-| Location | Count | Threat Level |
-|----------|-------|--------------|
-| Downtown Area | 234 | HIGH |
-| Airport Buffer Zone | 156 | CRITICAL |
-| Industrial Park | 145 | MEDIUM |
-| Residential Area | 123 | LOW |
-| Sports Stadium | 98 | HIGH |
-
-### Geofence Violations
-| Zone | Violations | Action Taken |
-|------|------------|--------------|
-| Airport No-Fly Zone | 8 | Alerted Authorities |
-| Military Base Buffer | 3 | Escalated to Security |
-| Power Plant | 1 | Investigated |
-
-## Alert Summary
-
-- **Total Alerts Generated:** 45
-- **Critical Alerts:** 3
-- **High Alerts:** 12
-- **Medium Alerts:** 18
-- **Low Alerts:** 12
-
-### Response Metrics
-- **Average Response Time:** 2.3 minutes
-- **Alerts Acknowledged:** 42 (93.3%)
-- **Alerts Resolved:** 38 (84.4%)
-
-## System Performance
-
-| Metric | Value |
-|--------|-------|
-| System Uptime | 99.98% |
-| Detection Latency (Avg) | 45 ms |
-| False Positive Rate | 3.2% |
-| Processing Throughput | 1,234 detections/hour |
-
-## Recommendations
-
-1. **Increase monitoring during peak hours (15:00-18:00)**
-2. **Review airport buffer zone security measures**
-3. **Update drone signature database for unknown types**
-4. **Schedule maintenance for antenna array**
-
-## Appendix
-
-- Full detection data available in attached CSV
-- Spectrum snapshots available in attachments
-- Alert details available on request
-PDF Format (.pdf)
-Professionally formatted reports suitable for distribution and printing.
-
-Features:
-
-Page numbering
-
-Table of contents
-
-Cover page with logo
-
-Professional typography
-
-Embedded charts and graphs
-
-Hyperlinks for navigation
-
-Digital signatures (optional)
-
-Watermark for confidential reports
-
-HTML Format (.html)
-Web-friendly reports with interactive elements.
-
-Features:
-
-Responsive design
-
-Interactive charts (Chart.js)
-
-Filterable tables
-
-Collapsible sections
-
-Print-friendly CSS
-
-Embedded JavaScript for interactivity
-
-Mobile-optimized viewing
-
-Excel Format (.xlsx)
-Data-rich reports for further analysis.
-
-Sheets:
-
-Summary - Key metrics and KPIs
-
-Detections - Full detection data
-
-Statistics - Aggregated statistics
-
-Timeline - Time-series data
-
-Locations - Geographic distribution
-
-Charts - Embedded visualizations
-
-PowerPoint Format (.pptx)
-Presentation-ready reports for meetings.
-
-Slides:
-
-Cover slide
-
-Executive summary
-
-Key metrics dashboard
-
-Detection trends
-
-Threat distribution
-
-Geographic heatmap
-
-Alert summary
-
-Performance metrics
-
-Recommendations
-
-Appendix
-
-Report Generation
-Daily Report Generation
 python
-async def generate_daily_report(date=None):
-    """Generate daily report for specified date"""
-    
-    from datetime import datetime, timedelta
-    
-    if date is None:
-        date = datetime.now() - timedelta(days=1)
-    
-    start_date = datetime(date.year, date.month, date.day, 0, 0, 0)
-    end_date = start_date + timedelta(days=1)
-    
-    # Collect data
-    detections = await get_detections_by_date_range(start_date, end_date)
-    alerts = await get_alerts_by_date_range(start_date, end_date)
-    metrics = await get_metrics_by_date_range(start_date, end_date)
-    
-    # Generate report content
-    report_data = {
-        'report_type': 'daily',
-        'date': date.strftime('%Y-%m-%d'),
-        'period_start': start_date.isoformat(),
-        'period_end': end_date.isoformat(),
-        'detections': detections,
-        'alerts': alerts,
-        'metrics': metrics,
-        'statistics': calculate_statistics(detections, alerts),
-        'charts': await generate_report_charts(detections)
+import numpy as np
+
+# Load feature data
+features = np.load('features_20240115.npy')
+
+# Structure: [num_samples, num_features]
+# Shape: (12500, 46) - 46 features per sample
+print(f"Features shape: {features.shape}")
+
+# Load labels
+labels = np.load('labels_20240115.npy')
+print(f"Labels shape: {labels.shape}")
+Labeled Dataset JSON Format (.json)
+Structured labeled dataset with metadata.
+
+json
+{
+  "dataset_info": {
+    "name": "Drone Detection Training Set",
+    "version": "2.0.0",
+    "created_date": "2024-01-15T10:30:00Z",
+    "num_samples": 8750,
+    "num_features": 46,
+    "num_classes": 14,
+    "class_distribution": {
+      "DJI Mavic 3": 1250,
+      "DJI Mini 3": 950,
+      "DJI Phantom": 1050,
+      "FPV Analog": 900,
+      "FPV Digital": 850,
+      "Autel EVO II": 1000,
+      "Skydio 2": 800,
+      "Parrot Anafi": 750,
+      "Noise": 1200
+    },
+    "feature_names": [
+      "peak_freq_hz",
+      "peak_magnitude_dbm",
+      "bandwidth_hz",
+      "snr_db",
+      "spectral_flatness",
+      "modulation_index",
+      "evm_rms",
+      "..."
+    ],
+    "source": "field_recordings",
+    "augmentation_applied": true,
+    "normalization": "z_score"
+  },
+  "data": [
+    {
+      "sample_id": "sample_001",
+      "features": {
+        "peak_freq_hz": 2440000000,
+        "peak_magnitude_dbm": -45.2,
+        "bandwidth_hz": 20000000,
+        "snr_db": 28.5,
+        "spectral_flatness": 0.234,
+        "modulation_index": 0.85,
+        "evm_rms": 0.12
+      },
+      "label": "DJI Mavic 3",
+      "label_id": 1,
+      "confidence": 0.95,
+      "source_file": "recording_001.iq",
+      "segment": 42
     }
-    
-    # Generate in multiple formats
-    reports = {}
-    
-    # Markdown
-    md_path = f"data/exports/reports/daily/daily_report_{date.strftime('%Y%m%d')}.md"
-    await generate_markdown_report(report_data, md_path)
-    reports['markdown'] = md_path
-    
-    # PDF
-    pdf_path = f"data/exports/reports/daily/daily_report_{date.strftime('%Y%m%d')}.pdf"
-    await convert_markdown_to_pdf(md_path, pdf_path)
-    reports['pdf'] = pdf_path
-    
-    # HTML
-    html_path = f"data/exports/reports/daily/daily_report_{date.strftime('%Y%m%d')}.html"
-    await generate_html_report(report_data, html_path)
-    reports['html'] = html_path
-    
-    # Update index
-    await update_report_index(report_data, reports)
-    
-    return reports
-Weekly Report Generation
-python
-async def generate_weekly_report(year, week):
-    """Generate weekly report for specified week"""
-    
-    from datetime import datetime, timedelta
-    
-    # Calculate week dates
-    start_date = datetime.strptime(f'{year}-W{week-1}-1', '%Y-W%W-%w')
-    end_date = start_date + timedelta(days=7)
-    
-    # Collect weekly data
-    detections = await get_detections_by_date_range(start_date, end_date)
-    
-    # Calculate week-over-week changes
-    prev_week_start = start_date - timedelta(days=7)
-    prev_week_end = start_date
-    prev_detections = await get_detections_by_date_range(prev_week_start, prev_week_end)
-    
-    # Generate report
-    report_data = {
-        'report_type': 'weekly',
-        'year': year,
-        'week': week,
-        'period_start': start_date.isoformat(),
-        'period_end': end_date.isoformat(),
-        'detections': detections,
-        'previous_week': {
-            'detections': prev_detections,
-            'count': len(prev_detections)
-        },
-        'statistics': calculate_weekly_statistics(detections, prev_detections),
-        'trends': calculate_weekly_trends(detections),
-        'highlights': generate_weekly_highlights(detections)
+  ]
+}
+Evaluation Results JSON Format (.json)
+Comprehensive model evaluation metrics.
+
+json
+{
+  "evaluation_info": {
+    "evaluation_id": "eval_20240115_001",
+    "evaluation_date": "2024-01-15T14:30:00Z",
+    "model_name": "Drone Detection Classifier",
+    "model_version": "2.0.0",
+    "test_set_size": 1875
+  },
+  "overall_metrics": {
+    "accuracy": 0.942,
+    "precision_macro": 0.918,
+    "recall_macro": 0.921,
+    "f1_macro": 0.919,
+    "precision_weighted": 0.941,
+    "recall_weighted": 0.942,
+    "f1_weighted": 0.941,
+    "kappa": 0.935,
+    "mcc": 0.928
+  },
+  "per_class_metrics": {
+    "DJI Mavic 3": {
+      "precision": 0.94,
+      "recall": 0.92,
+      "f1": 0.93,
+      "support": 156,
+      "auc": 0.98
+    },
+    "FPV Analog": {
+      "precision": 0.91,
+      "recall": 0.93,
+      "f1": 0.92,
+      "support": 135,
+      "auc": 0.97
     }
-    
-    # Generate report files
-    reports = {}
-    
-    for fmt in ['md', 'pdf', 'html', 'xlsx']:
-        output_path = f"data/exports/reports/weekly/weekly_report_{year}_W{week:02d}.{fmt}"
-        await generate_report(report_data, output_path, format=fmt)
-        reports[fmt] = output_path
-    
-    return reports
-Incident Report Generation
+  },
+  "confusion_matrix": {
+    "shape": [14, 14],
+    "values": [[182, 3, 2, ...], [...]]
+  },
+  "roc_auc_scores": {
+    "micro": 0.98,
+    "macro": 0.97,
+    "weighted": 0.98
+  },
+  "feature_importance": {
+    "peak_magnitude_dbm": 0.1245,
+    "snr_db": 0.1123,
+    "peak_freq_hz": 0.0987,
+    "bandwidth_hz": 0.0876,
+    "spectral_flatness": 0.0765
+  },
+  "training_history": {
+    "num_epochs": 100,
+    "best_epoch": 87,
+    "train_loss": [0.456, 0.234, ...],
+    "val_loss": [0.523, 0.267, ...],
+    "train_accuracy": [0.82, 0.89, ...],
+    "val_accuracy": [0.79, 0.88, ...]
+  }
+}
+Model Export Formats
+Pickle Format (.pkl) - Python serialized model
+
 python
-async def generate_incident_report(incident_id, detection_ids, alert_ids):
-    """Generate incident-specific report"""
+import pickle
+
+# Load model
+with open('classifier_20240115.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+# Load scaler
+with open('scaler_20240115.pkl', 'rb') as f:
+    scaler = pickle.load(f)
+ONNX Format (.onnx) - Cross-platform model format
+
+python
+import onnxruntime as ort
+
+# Load ONNX model
+session = ort.InferenceSession('classifier_20240115.onnx')
+
+# Run inference
+inputs = {session.get_inputs()[0].name: features}
+outputs = session.run(None, inputs)
+Model Metadata (.json)
+
+json
+{
+  "model_name": "Drone Detection Classifier",
+  "version": "2.0.0",
+  "algorithm": "RandomForest",
+  "training_date": "2024-01-15T10:30:00Z",
+  "num_features": 46,
+  "feature_names": ["peak_freq_hz", "peak_magnitude_dbm", ...],
+  "num_classes": 14,
+  "class_names": ["Noise", "DJI Mavic 3", "FPV Analog", ...],
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_depth": 20,
+    "min_samples_split": 5,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt"
+  },
+  "performance": {
+    "accuracy": 0.942,
+    "f1_macro": 0.919,
+    "precision_macro": 0.918,
+    "recall_macro": 0.921
+  },
+  "input_shape": [-1, 46],
+  "output_shape": [-1, 14],
+  "framework": "scikit-learn",
+  "dependencies": {
+    "scikit-learn": "1.2.2",
+    "numpy": "1.24.3",
+    "scipy": "1.10.1"
+  }
+}
+Export Operations
+Export Feature Dataset
+python
+async def export_feature_dataset(X, y, feature_names, output_dir="data/exports/ml"):
+    """Export feature dataset to multiple formats"""
     
     from datetime import datetime
+    import pandas as pd
+    import numpy as np
     
-    # Fetch incident data
-    detections = await get_detections_by_ids(detection_ids)
-    alerts = await get_alerts_by_ids(alert_ids)
-    incident_details = await get_incident_details(incident_id)
+    timestamp = datetime.now().strftime('%Y%m%d')
+    base_filename = f"features_{timestamp}"
     
-    # Generate evidence package
-    evidence_files = await package_evidence(detections, alerts, incident_id)
+    exports = {}
     
-    report_data = {
-        'report_type': 'incident',
-        'incident_id': incident_id,
-        'report_date': datetime.now().isoformat(),
-        'incident_details': incident_details,
-        'detections': detections,
-        'alerts': alerts,
-        'timeline': build_incident_timeline(detections, alerts),
-        'evidence': evidence_files,
-        'analysis': analyze_incident(detections, alerts),
-        'recommendations': generate_recommendations(incident_details)
-    }
+    # CSV export
+    df = pd.DataFrame(X, columns=feature_names)
+    df['label'] = y
+    csv_path = Path(output_dir) / "features" / f"{base_filename}.csv"
+    df.to_csv(csv_path, index=False)
+    exports['csv'] = str(csv_path)
     
-    # Generate report
-    md_path = f"data/exports/reports/incident/incident_report_{incident_id}.md"
-    await generate_incident_markdown(report_data, md_path)
+    # NumPy export
+    npy_path = Path(output_dir) / "features" / f"{base_filename}.npy"
+    np.save(npy_path, X)
+    exports['npy'] = str(npy_path)
     
-    pdf_path = f"data/exports/reports/incident/incident_report_{incident_id}.pdf"
-    await convert_markdown_to_pdf(md_path, pdf_path)
+    # Feature subsets
+    spectral_indices = [i for i, name in enumerate(feature_names) if 'spectral' in name]
+    if spectral_indices:
+        spectral_path = Path(output_dir) / "features" / f"{base_filename}_spectral.csv"
+        df_spectral = pd.DataFrame(X[:, spectral_indices], 
+                                   columns=[feature_names[i] for i in spectral_indices])
+        df_spectral.to_csv(spectral_path, index=False)
+        exports['spectral'] = str(spectral_path)
     
-    # Create evidence archive
-    zip_path = f"data/exports/reports/incident/incident_report_{incident_id}_evidence.zip"
-    await create_evidence_archive(evidence_files, zip_path)
-    
-    return {
-        'report': pdf_path,
-        'markdown': md_path,
-        'evidence': zip_path
-    }
-Custom Report Generation
+    return exports
+Create Labeled Dataset
 python
-async def generate_custom_report(filters, date_range, metrics, formats=['pdf']):
-    """Generate custom report with user-specified parameters"""
+async def create_labeled_dataset(features, labels, class_names, output_dir="data/exports/ml"):
+    """Create labeled dataset for training"""
     
     from datetime import datetime
-    
-    # Apply filters and get data
-    detections = await get_detections_with_filters(filters, date_range)
-    alerts = await get_alerts_with_filters(filters, date_range)
-    performance = await get_performance_metrics(date_range)
-    
-    report_data = {
-        'report_type': 'custom',
-        'export_id': datetime.now().strftime('%Y%m%d_%H%M%S'),
-        'export_date': datetime.now().isoformat(),
-        'filters': filters,
-        'date_range': {
-            'start': date_range['start'].isoformat(),
-            'end': date_range['end'].isoformat()
-        },
-        'metrics': metrics,
-        'detections': detections,
-        'alerts': alerts,
-        'performance': performance,
-        'statistics': calculate_custom_statistics(detections, alerts, metrics)
-    }
-    
-    reports = {}
-    
-    for fmt in formats:
-        output_path = f"data/exports/reports/custom/custom_report_{report_data['export_id']}.{fmt}"
-        await generate_report(report_data, output_path, format=fmt)
-        reports[fmt] = output_path
-    
-    return reports
-Report Templates
-Daily Report Template (Markdown)
-markdown
-# Daily Drone Detection Report
-**Date:** {{ date }}
-**Generated:** {{ generated_at }}
-**Period:** {{ period_start }} - {{ period_end }}
-
-## Executive Summary
-{{ executive_summary }}
-
-## Key Metrics
-| Metric | Value | Change |
-|--------|-------|--------|
-| Total Detections | {{ total_detections }} | {{ detection_change }} |
-| Active Threats | {{ active_threats }} | {{ threat_change }} |
-| High Confidence | {{ high_confidence }} | {{ confidence_change }} |
-| Geofence Violations | {{ geofence_violations }} | {{ geofence_change }} |
-
-## Detection Statistics
-### By Threat Level
-{{ threat_level_table }}
-
-### By Drone Type
-{{ drone_type_table }}
-
-## Temporal Analysis
-### Hourly Distribution
-{{ hourly_chart }}
-
-### Peak Hours
-{{ peak_hours }}
-
-## Geographic Distribution
-### Top Locations
-{{ location_table }}
-
-### Geofence Violations
-{{ violation_table }}
-
-## Alert Summary
-{{ alert_summary }}
-
-### Response Metrics
-{{ response_metrics }}
-
-## System Performance
-{{ performance_table }}
-
-## Recommendations
-{{ recommendations }}
-
-## Appendix
-- Full data: [detections_{{ date }}.csv](attachments/detections_{{ date }}.csv)
-- Spectrum data: [spectrum_{{ date }}.json](attachments/spectrum_{{ date }}.json)
-Incident Report Template
-markdown
-# Incident Report: {{ incident_id }}
-**Date:** {{ report_date }}
-**Classification:** {{ classification }}
-**Severity:** {{ severity }}
-
-## Incident Overview
-- **Time of Incident:** {{ incident_time }}
-- **Duration:** {{ duration }}
-- **Location:** {{ location }}
-- **Drone Type:** {{ drone_type }}
-- **Threat Level:** {{ threat_level }}
-
-## Timeline of Events
-{{ timeline }}
-
-## Detection Details
-{{ detection_table }}
-
-## Alert Details
-{{ alert_table }}
-
-## Evidence Summary
-{{ evidence_list }}
-
-## Analysis
-### Root Cause Analysis
-{{ root_cause }}
-
-### Impact Assessment
-{{ impact_assessment }}
-
-### Contributing Factors
-{{ contributing_factors }}
-
-## Response Actions
-| Time | Action | Actor | Result |
-|------|--------|-------|--------|
-{{ response_actions }}
-
-## Recommendations
-{{ recommendations }}
-
-## Lessons Learned
-{{ lessons_learned }}
-
-## Sign-off
-- **Prepared by:** {{ prepared_by }}
-- **Reviewed by:** {{ reviewed_by }}
-- **Approved by:** {{ approved_by }}
-- **Date:** {{ signoff_date }}
-Report API
-REST Endpoints
-python
-from fastapi import APIRouter, Query, Body, Depends
-from datetime import datetime
-
-router = APIRouter(prefix="/api/reports", tags=["reports"])
-
-@router.get("/daily/{date}")
-async def get_daily_report(
-    date: str = Path(..., description="Date in YYYYMMDD format"),
-    format: str = Query("pdf", regex="^(md|pdf|html)$"),
-    user = Depends(get_current_user)
-):
-    """Download daily report"""
-    
-    report_path = Path(f"data/exports/reports/daily/daily_report_{date}.{format}")
-    
-    if not report_path.exists():
-        raise HTTPException(404, "Report not found")
-    
-    return FileResponse(report_path, filename=report_path.name)
-
-@router.post("/generate")
-async def generate_report_endpoint(
-    report_type: str = Body(..., regex="^(daily|weekly|monthly|incident|custom)$"),
-    parameters: dict = Body(...),
-    formats: list = Body(["pdf"]),
-    user = Depends(require_permission("reports:generate"))
-):
-    """Generate new report"""
-    
-    if report_type == 'daily':
-        result = await generate_daily_report(**parameters)
-    elif report_type == 'weekly':
-        result = await generate_weekly_report(**parameters)
-    elif report_type == 'monthly':
-        result = await generate_monthly_report(**parameters)
-    elif report_type == 'incident':
-        result = await generate_incident_report(**parameters)
-    else:
-        result = await generate_custom_report(**parameters, formats=formats)
-    
-    return {
-        "message": "Report generated successfully",
-        "report_id": result.get('report_id'),
-        "download_urls": result
-    }
-
-@router.get("/list")
-async def list_reports(
-    report_type: Optional[str] = Query(None, regex="^(daily|weekly|monthly|incident|custom)$"),
-    start_date: Optional[datetime] = Query(None),
-    end_date: Optional[datetime] = Query(None),
-    limit: int = Query(50, le=100),
-    user = Depends(get_current_user)
-):
-    """List available reports"""
-    
-    reports = await scan_reports_directory(
-        report_type=report_type,
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit
-    )
-    
-    return {"reports": reports, "total": len(reports)}
-Report Automation
-Scheduled Report Generation
-python
-import schedule
-import asyncio
-
-def schedule_reports():
-    """Schedule automated report generation"""
-    
-    # Daily report at 00:30
-    schedule.every().day.at("00:30").do(
-        lambda: asyncio.run(generate_daily_report())
-    )
-    
-    # Weekly report on Monday at 01:00
-    schedule.every().monday.at("01:00").do(
-        lambda: asyncio.run(generate_weekly_report())
-    )
-    
-    # Monthly report on 1st at 02:00
-    schedule.every().month.at("02:00").do(
-        lambda: asyncio.run(generate_monthly_report())
-    )
-    
-    # Quarterly report on Jan 1, Apr 1, Jul 1, Oct 1 at 03:00
-    schedule.every().quarter.at("03:00").do(
-        lambda: asyncio.run(generate_quarterly_report())
-    )
-    
-    # Annual report on Jan 1 at 04:00
-    schedule.every().year.at("04:00").do(
-        lambda: asyncio.run(generate_annual_report())
-    )
-Report Distribution
-python
-async def distribute_report(report_path, recipients, channels=['email']):
-    """Distribute report to recipients"""
-    
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    from email.mime.base import MIMEBase
-    
-    results = []
-    
-    for channel in channels:
-        if channel == 'email':
-            for recipient in recipients:
-                result = await send_report_email(report_path, recipient)
-                results.append(result)
-        
-        elif channel == 'slack':
-            result = await post_report_to_slack(report_path, recipients)
-            results.append(result)
-        
-        elif channel == 'webhook':
-            result = await send_report_webhook(report_path, recipients)
-            results.append(result)
-    
-    return {
-        'report': str(report_path),
-        'recipients': recipients,
-        'channels': channels,
-        'results': results
-    }
-Report Analysis Tools
-Compare Reports
-python
-def compare_reports(report1_path, report2_path):
-    """Compare two reports"""
-    
     import json
+    import numpy as np
+    from sklearn.model_selection import train_test_split
     
-    with open(report1_path, 'r') as f:
-        report1 = json.load(f)
+    # Split dataset
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        features, labels, test_size=0.3, random_state=42, stratify=labels
+    )
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
+    )
     
-    with open(report2_path, 'r') as f:
-        report2 = json.load(f)
-    
-    comparison = {
-        'detection_change': report2['statistics']['total_detections'] - report1['statistics']['total_detections'],
-        'threat_level_changes': {},
-        'drone_type_changes': {},
-        'performance_changes': {}
+    datasets = {
+        'training_set': (X_train, y_train),
+        'validation_set': (X_val, y_val),
+        'test_set': (X_test, y_test)
     }
     
-    # Compare threat levels
-    for level in ['HIGH', 'MEDIUM', 'LOW', 'CRITICAL']:
-        comparison['threat_level_changes'][level] = {
-            'previous': report1['statistics']['by_threat_level'].get(level, 0),
-            'current': report2['statistics']['by_threat_level'].get(level, 0),
-            'change': report2['statistics']['by_threat_level'].get(level, 0) - report1['statistics']['by_threat_level'].get(level, 0)
+    exports = {}
+    
+    for name, (X, y) in datasets.items():
+        # NumPy export
+        npy_path = Path(output_dir) / "labeled" / f"{name}.npy"
+        np.savez(npy_path, features=X, labels=y)
+        exports[f'{name}_npy'] = str(npy_path)
+        
+        # JSON export
+        json_path = Path(output_dir) / "labeled" / f"{name}.json"
+        
+        # Convert to list for JSON
+        data_list = []
+        for i, (sample_features, sample_label) in enumerate(zip(X, y)):
+            data_list.append({
+                'sample_id': f"{name}_{i:04d}",
+                'features': {f"feat_{j}": float(val) for j, val in enumerate(sample_features)},
+                'label': class_names[int(sample_label)],
+                'label_id': int(sample_label)
+            })
+        
+        dataset_info = {
+            'dataset_info': {
+                'name': name.replace('_', ' ').title(),
+                'created_date': datetime.now().isoformat(),
+                'num_samples': len(X),
+                'num_features': X.shape[1],
+                'num_classes': len(np.unique(y)),
+                'class_distribution': {class_names[int(label)]: int(np.sum(y == label)) 
+                                      for label in np.unique(y)}
+            },
+            'data': data_list
         }
+        
+        with open(json_path, 'w') as f:
+            json.dump(dataset_info, f, indent=2)
+        
+        exports[f'{name}_json'] = str(json_path)
     
-    return comparison
-Extract Report Data
+    return exports
+Export Model Evaluation
 python
-def extract_report_data(report_path):
-    """Extract structured data from report"""
+async def export_model_evaluation(model, X_test, y_test, class_names, output_dir="data/exports/ml"):
+    """Export comprehensive model evaluation"""
     
-    import re
+    from datetime import datetime
     import json
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from sklearn.metrics import (classification_report, confusion_matrix, 
+                                 roc_curve, auc, precision_recall_curve)
     
-    with open(report_path, 'r') as f:
-        content = f.read()
+    timestamp = datetime.now().strftime('%Y%m%d')
+    eval_dir = Path(output_dir) / "evaluations"
+    eval_dir.mkdir(parents=True, exist_ok=True)
     
-    # Extract key metrics using regex
-    metrics = {}
+    # Make predictions
+    y_pred = model.predict(X_test)
+    y_pred_proba = model.predict_proba(X_test)
     
-    patterns = {
-        'total_detections': r'Total Detections[:\s]+([0-9,]+)',
-        'active_threats': r'Active Threats[:\s]+([0-9,]+)',
-        'avg_confidence': r'Average Confidence[:\s]+([0-9.]+)%',
-        'system_uptime': r'System Uptime[:\s]+([0-9.]+)%'
+    # Generate metrics
+    report = classification_report(y_test, y_pred, target_names=class_names, output_dict=True)
+    
+    # Confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    plt.tight_layout()
+    cm_path = eval_dir / f"confusion_matrix_{timestamp}.png"
+    plt.savefig(cm_path, dpi=150)
+    plt.close()
+    
+    # ROC Curves (for multi-class)
+    if hasattr(model, 'predict_proba'):
+        n_classes = len(class_names)
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        
+        plt.figure(figsize=(10, 8))
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(y_test == i, y_pred_proba[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+            plt.plot(fpr[i], tpr[i], lw=2, label=f'{class_names[i]} (AUC = {roc_auc[i]:.3f})')
+        
+        plt.plot([0, 1], [0, 1], 'k--', lw=2)
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curves')
+        plt.legend(loc="lower right")
+        plt.tight_layout()
+        roc_path = eval_dir / f"roc_curves_{timestamp}.png"
+        plt.savefig(roc_path, dpi=150)
+        plt.close()
+    
+    # Feature importance (if available)
+    if hasattr(model, 'feature_importances_'):
+        importances = model.feature_importances_
+        indices = np.argsort(importances)[::-1][:20]
+        
+        plt.figure(figsize=(10, 8))
+        plt.bar(range(len(indices)), importances[indices])
+        plt.xticks(range(len(indices)), [f"F{i}" for i in indices], rotation=45)
+        plt.xlabel('Feature Index')
+        plt.ylabel('Importance')
+        plt.title('Top 20 Feature Importances')
+        plt.tight_layout()
+        fi_path = eval_dir / f"feature_importance_{timestamp}.png"
+        plt.savefig(fi_path, dpi=150)
+        plt.close()
+    
+    # Save JSON results
+    results = {
+        'evaluation_info': {
+            'evaluation_id': f"eval_{timestamp}_001",
+            'evaluation_date': datetime.now().isoformat(),
+            'model_name': model.__class__.__name__,
+            'test_set_size': len(y_test)
+        },
+        'overall_metrics': {
+            'accuracy': report['accuracy'],
+            'precision_macro': report['macro avg']['precision'],
+            'recall_macro': report['macro avg']['recall'],
+            'f1_macro': report['macro avg']['f1-score']
+        },
+        'per_class_metrics': {
+            class_names[i]: {
+                'precision': report[class_names[i]]['precision'],
+                'recall': report[class_names[i]]['recall'],
+                'f1': report[class_names[i]]['f1-score'],
+                'support': report[class_names[i]]['support']
+            } for i in range(len(class_names))
+        },
+        'roc_auc_scores': roc_auc if 'roc_auc' in dir() else None,
+        'confusion_matrix': cm.tolist()
     }
     
-    for key, pattern in patterns.items():
-        match = re.search(pattern, content)
-        if match:
-            metrics[key] = match.group(1).replace(',', '')
+    json_path = eval_dir / f"evaluation_{timestamp}.json"
+    with open(json_path, 'w') as f:
+        json.dump(results, f, indent=2)
     
-    # Extract table data
-    tables = extract_tables_from_markdown(content)
+    # Generate HTML report
+    html_path = eval_dir / f"evaluation_{timestamp}.html"
+    await generate_evaluation_html(results, cm_path, roc_path, html_path)
     
     return {
-        'metrics': metrics,
-        'tables': tables,
-        'raw_content': content
+        'json': str(json_path),
+        'html': str(html_path),
+        'confusion_matrix': str(cm_path),
+        'roc_curves': str(roc_path) if 'roc_path' in dir() else None,
+        'feature_importance': str(fi_path) if 'fi_path' in dir() else None
     }
-Report Storage
+Experiment Tracking
+Experiment Configuration
+json
+{
+  "experiment_id": "exp_001_baseline",
+  "name": "Baseline Random Forest",
+  "description": "Baseline model with default hyperparameters",
+  "created_date": "2024-01-15T10:00:00Z",
+  "status": "completed",
+  "configuration": {
+    "model_type": "RandomForestClassifier",
+    "hyperparameters": {
+      "n_estimators": 100,
+      "max_depth": null,
+      "min_samples_split": 2,
+      "min_samples_leaf": 1,
+      "max_features": "sqrt"
+    },
+    "feature_set": "all_46_features",
+    "data_split": {
+      "train": 0.7,
+      "validation": 0.15,
+      "test": 0.15
+    },
+    "random_seed": 42
+  },
+  "results": {
+    "accuracy": 0.912,
+    "f1_macro": 0.894,
+    "training_time_seconds": 45.2,
+    "inference_time_ms": 12.5
+  },
+  "artifacts": {
+    "model": "models/classifier_exp001.pkl",
+    "scaler": "models/scaler_exp001.pkl",
+    "evaluation": "evaluations/evaluation_exp001.json"
+  }
+}
+Run Experiment
+python
+async def run_experiment(config, output_dir="data/exports/ml/experiments"):
+    """Run and track ML experiment"""
+    
+    from datetime import datetime
+    import json
+    import time
+    
+    experiment_id = f"exp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    
+    # Log experiment start
+    experiment = {
+        'experiment_id': experiment_id,
+        'name': config['name'],
+        'description': config.get('description', ''),
+        'start_time': datetime.now().isoformat(),
+        'status': 'running',
+        'configuration': config
+    }
+    
+    # Save experiment config
+    config_path = Path(output_dir) / f"{experiment_id}_config.json"
+    with open(config_path, 'w') as f:
+        json.dump(experiment, f, indent=2)
+    
+    try:
+        start_time = time.time()
+        
+        # Train model
+        model = train_model(config)
+        
+        training_time = time.time() - start_time
+        
+        # Evaluate
+        metrics = evaluate_model(model, config)
+        
+        # Save results
+        results = {
+            'experiment_id': experiment_id,
+            'status': 'completed',
+            'end_time': datetime.now().isoformat(),
+            'training_time_seconds': training_time,
+            'results': metrics,
+            'model_path': f"models/{experiment_id}.pkl"
+        }
+        
+        results_path = Path(output_dir) / f"{experiment_id}_results.json"
+        with open(results_path, 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        return experiment_id, results
+        
+    except Exception as e:
+        # Log failure
+        error = {
+            'experiment_id': experiment_id,
+            'status': 'failed',
+            'end_time': datetime.now().isoformat(),
+            'error': str(e)
+        }
+        
+        error_path = Path(output_dir) / f"{experiment_id}_error.json"
+        with open(error_path, 'w') as f:
+            json.dump(error, f, indent=2)
+        
+        raise
+Data Versioning
+Version Management
+python
+class MLDataVersion:
+    """Manage versions of ML training data"""
+    
+    def __init__(self, data_dir="data/exports/ml"):
+        self.data_dir = Path(data_dir)
+        self.version_file = self.data_dir / "versions.json"
+    
+    def create_version(self, version, description, datasets):
+        """Create new data version"""
+        
+        version_info = {
+            'version': version,
+            'created_date': datetime.now().isoformat(),
+            'description': description,
+            'datasets': datasets,
+            'checksums': {}
+        }
+        
+        # Calculate checksums
+        for name, path in datasets.items():
+            file_path = self.data_dir / path
+            if file_path.exists():
+                version_info['checksums'][name] = self._calculate_md5(file_path)
+        
+        # Load existing versions
+        versions = self._load_versions()
+        versions[version] = version_info
+        
+        with open(self.version_file, 'w') as f:
+            json.dump(versions, f, indent=2)
+        
+        return version_info
+    
+    def get_version(self, version):
+        """Get specific version info"""
+        versions = self._load_versions()
+        return versions.get(version)
+    
+    def list_versions(self):
+        """List all versions"""
+        versions = self._load_versions()
+        return [{'version': v, 'created_date': info['created_date'], 
+                'description': info['description']} 
+                for v, info in versions.items()]
+    
+    def _load_versions(self):
+        if self.version_file.exists():
+            with open(self.version_file, 'r') as f:
+                return json.load(f)
+        return {}
+    
+    def _calculate_md5(self, file_path):
+        import hashlib
+        md5 = hashlib.md5()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                md5.update(chunk)
+        return md5.hexdigest()
+Integration Examples
+Load Data for Training
+python
+import numpy as np
+import json
+from sklearn.ensemble import RandomForestClassifier
+
+def load_training_data(version="latest"):
+    """Load training data for model training"""
+    
+    if version == "latest":
+        # Load latest dataset
+        features = np.load('data/exports/ml/labeled/training_set.npy')
+        labels = np.load('data/exports/ml/labeled/training_set_labels.npy')
+    else:
+        # Load specific version
+        version_info = load_version_info(version)
+        features = np.load(version_info['datasets']['training_features'])
+        labels = np.load(version_info['datasets']['training_labels'])
+    
+    return features, labels
+
+# Usage
+X_train, y_train = load_training_data()
+model = RandomForestClassifier(n_estimators=100)
+model.fit(X_train, y_train)
+Load Pre-trained Model
+python
+import pickle
+import json
+
+def load_production_model():
+    """Load the latest production model"""
+    
+    # Load model metadata
+    with open('data/exports/ml/models/model_metadata.json', 'r') as f:
+        metadata = json.load(f)
+    
+    # Load model
+    with open(metadata['model_path'], 'rb') as f:
+        model = pickle.load(f)
+    
+    # Load scaler
+    with open(metadata['scaler_path'], 'rb') as f:
+        scaler = pickle.load(f)
+    
+    return model, scaler, metadata
+Storage Guidelines
 Retention Policy
-Report Type	Retention	Archive	Format
-Daily	90 days	Monthly	PDF + MD
-Weekly	180 days	Quarterly	PDF + MD
-Monthly	3 years	Annually	PDF + XLSX
-Quarterly	5 years	Permanent	PDF + PPTX
-Annual	Permanent	Permanent	PDF + XLSX
-Incident	Permanent	Permanent	PDF + ZIP
-Custom	User-defined	User-defined	Configurable
+Data Type	Retention	Compression	Archive
+Feature exports	90 days	gzip	Quarterly
+Labeled datasets	1 year	None	Permanent
+Evaluation results	1 year	None	Permanent
+Model artifacts	Permanent	None	Versioned
+Experiment logs	6 months	gzip	Quarterly
+Raw training data	30 days	gzip	Monthly
 Storage Limits
 python
-def check_report_storage():
-    """Check report storage usage"""
+def check_ml_storage():
+    """Check ML data storage usage"""
     
-    reports_dir = Path("data/exports/reports")
-    total_size = sum(f.stat().st_size for f in reports_dir.rglob("*") if f.is_file())
+    ml_dir = Path("data/exports/ml")
+    total_size = sum(f.stat().st_size for f in ml_dir.rglob("*") if f.is_file())
     size_gb = total_size / (1024 ** 3)
     
     limits = {
-        'warning': 2,     # 2 GB warning
-        'critical': 5,    # 5 GB critical
-        'max': 10         # 10 GB maximum
+        'warning': 5,     # 5 GB warning
+        'critical': 10,   # 10 GB critical
+        'max': 20         # 20 GB maximum
     }
     
     return {
         'size_gb': size_gb,
-        'file_count': len(list(reports_dir.rglob("*"))),
+        'file_count': len(list(ml_dir.rglob("*"))),
         'status': 'ok' if size_gb < limits['warning'] else 'warning' if size_gb < limits['critical'] else 'critical'
     }
 Troubleshooting
 Common Issues
 Issue	Cause	Solution
-Missing data	Date range incorrect	Verify report parameters
-Generation timeout	Too much data	Reduce date range or add filters
-PDF conversion failed	Missing dependencies	Install required packages
-Chart missing	Data format error	Check data structure
-Large file size	Embedded images	Compress images or use references
-Report Regeneration
+Features mismatch	Version inconsistency	Check feature names and order
+Memory error	Dataset too large	Use chunked loading
+Model loading fails	Pickle version	Use compatible Python version
+Missing dependencies	Library not installed	Install required packages
+Data Validation
 python
-async def regenerate_report(report_id, report_type):
-    """Regenerate a report"""
+def validate_ml_export(export_path):
+    """Validate ML export integrity"""
     
-    # Find original report parameters
-    params = await get_report_parameters(report_id, report_type)
+    export_path = Path(export_path)
     
-    if not params:
-        return {'error': 'Report parameters not found'}
+    if export_path.suffix == '.npy':
+        try:
+            data = np.load(export_path)
+            return {'valid': True, 'shape': data.shape, 'dtype': str(data.dtype)}
+        except Exception as e:
+            return {'valid': False, 'error': str(e)}
     
-    # Regenerate report
-    if report_type == 'daily':
-        result = await generate_daily_report(**params)
-    elif report_type == 'weekly':
-        result = await generate_weekly_report(**params)
-    elif report_type == 'monthly':
-        result = await generate_monthly_report(**params)
-    else:
-        result = await generate_custom_report(**params)
+    elif export_path.suffix == '.json':
+        try:
+            with open(export_path, 'r') as f:
+                data = json.load(f)
+            return {'valid': True, 'keys': list(data.keys())}
+        except Exception as e:
+            return {'valid': False, 'error': str(e)}
     
-    return {
-        'message': 'Report regenerated successfully',
-        'new_report': result
-    }
+    elif export_path.suffix == '.pkl':
+        try:
+            with open(export_path, 'rb') as f:
+                data = pickle.load(f)
+            return {'valid': True, 'type': str(type(data))}
+        except Exception as e:
+            return {'valid': False, 'error': str(e)}
+    
+    return {'valid': False, 'error': 'Unknown format'}
 Best Practices
-Report Configuration
+Data Versioning
 python
-# Recommended report settings
-REPORT_CONFIG = {
-    'daily': {
-        'time': '00:30',
-        'formats': ['md', 'pdf', 'html'],
-        'include_attachments': True,
-        'compression': False,
-        'retention_days': 90
-    },
-    'weekly': {
-        'day': 'Monday',
-        'time': '01:00',
-        'formats': ['md', 'pdf', 'xlsx'],
-        'include_attachments': True,
-        'compression': True,
-        'retention_days': 180
-    },
-    'monthly': {
-        'day': 1,
-        'time': '02:00',
-        'formats': ['pdf', 'xlsx', 'pptx'],
-        'include_attachments': True,
-        'compression': True,
-        'retention_years': 3
-    }
+# Recommended versioning scheme
+VERSIONING_SCHEME = {
+    'format': 'v{major}.{minor}.{patch}',
+    'major': 'Breaking changes (feature set changes)',
+    'minor': 'New features or samples added',
+    'patch': 'Bug fixes or minor updates'
 }
-Quality Assurance
-python
-def validate_report(report_path):
-    """Validate report quality"""
-    
-    checks = {
-        'file_exists': report_path.exists(),
-        'file_not_empty': report_path.stat().st_size > 0,
-        'contains_data': check_report_has_data(report_path),
-        'valid_format': check_report_format(report_path),
-        'no_placeholders': not check_for_placeholders(report_path)
-    }
-    
-    quality_score = sum(checks.values()) / len(checks) * 100
-    
-    return {
-        'valid': quality_score == 100,
-        'checks': checks,
-        'quality_score': quality_score,
-        'issues': [k for k, v in checks.items() if not v]
-    }
+
+# Example versions
+VERSIONS = {
+    'v1.0.0': 'Initial release - 46 features, 10,000 samples',
+    'v1.1.0': 'Added 2,500 samples, 5 new drone types',
+    'v2.0.0': 'Added 8 new features, removed 3 deprecated features'
+}
+Model Export Checklist
+Export model in multiple formats (pickle, ONNX)
+
+Save feature scaler
+
+Include model metadata
+
+Generate model card
+
+Record evaluation metrics
+
+Save feature importance
+
+Document dependencies
+
+Calculate model checksum
