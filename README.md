@@ -1,275 +1,35 @@
-# HackRF Drone Detection System
+# HackRF Drone Detection System - API Reference
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![HackRF](https://img.shields.io/badge/HackRF-One-blue.svg)](https://greatscottgadgets.com/hackrf/)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+**Version:** 2.0.0  
+**Base URL:** `ws://localhost:8082` (WebSocket)  
+**Protocol:** WebSocket (JSON messages)
 
-A professional, real-time drone detection system using HackRF One SDR, multi-sensor fusion, and a modern web interface. Detect, track, and classify drones by analyzing their RF signatures in the 2.4GHz, 5.8GHz, 915MHz, and 433MHz bands.
+---
 
-## 🚁 Features
+## 📡 WebSocket API
 
-- **Real-time RF Signal Processing** - Live spectrum analysis using HackRF One
-- **Multi-band Scanning** - 2.4GHz, 5.8GHz, 915MHz, and 433MHz bands
-- **Drone Signature Detection** - DJI OcuSync, ExpressLRS, Crossfire, FrSky D16, Analog FPV
-- **Sensor Fusion** - Combines RF, LIDAR, Camera, and Radar data (simulated)
-- **Real-time Web Dashboard** - Live spectrum view, detection feed, confidence charts
-- **Threat Assessment** - Automatic threat level classification (CRITICAL, HIGH, MEDIUM, LOW, NEGLIGIBLE)
-- **SQLite Database** - Persistent storage of all detections
-- **WebSocket Broadcasting** - Real-time updates to connected clients
-- **GNUplot Visualization** - Confidence trend plotting
+The system uses WebSocket for real-time bidirectional communication. Connect to `ws://localhost:8082` to start receiving data.
 
-## 📋 Table of Contents
+### Connection
 
-- [Hardware Requirements](#hardware-requirements)
-- [Software Requirements](#software-requirements)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Project Structure](#project-structure)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [API Documentation](#api-documentation)
-- [Database Schema](#database-schema)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+```javascript
+const ws = new WebSocket('ws://localhost:8082');
 
-## 🔧 Hardware Requirements
+ws.onopen = () => {
+    console.log('Connected to drone detection system');
+    ws.send('start'); // Start scanning
+};
 
-### Required
-| Component | Specification | Purpose |
-|-----------|--------------|---------|
-| HackRF One | 10MHz-6GHz, 20MSPS | RF signal capture |
-| Antenna (2.4GHz) | Yagi, 15-20dBi gain | Drone control signal detection |
-| USB 3.0 Cable | Type-A to Micro-B | High-speed data transfer |
-| Computer | Raspberry Pi 4 / Intel NUC / Laptop | Processing unit |
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Received:', data);
+};
+📨 Message Types
+1. Server → Client Messages
+1.1 Detection Event
+Type: detection
 
-### Optional
-| Component | Specification | Purpose |
-|-----------|--------------|---------|
-| Antenna (5.8GHz) | Yagi/Panel, 15dBi | Video downlink detection |
-| Antenna (915MHz) | Dipole/Yagi, 8dBi | ISM band detection |
-| Antenna (433MHz) | Dipole, 6dBi | Legacy FPV detection |
-| GPS Module | NEO-M9N (I2C) | Geolocation tagging |
-| Opera Cake | 4-port RF switch | Automated band switching |
-
-## 💻 Software Requirements
-
-### System Dependencies
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake git \
-    libhackrf-dev libfftw3-dev libsqlite3-dev \
-    libwebsockets-dev libliquid-dev libusb-1.0-0-dev \
-    gnuplot python3 python3-pip
-Windows (MSYS2):
-
-bash
-pacman -S --needed base-devel mingw-w64-x86_64-toolchain \
-    mingw-w64-x86_64-cmake mingw-w64-x86_64-libusb \
-    mingw-w64-x86_64-fftw mingw-w64-x86_64-libsqlite3 \
-    mingw-w64-x86_64-liquid-dsp mingw-w64-x86_64-libwebsockets
-macOS (Homebrew):
-
-bash
-brew install hackrf fftw sqlite3 libwebsockets liquid-dsp gnuplot
-📥 Installation
-1. Clone or Create Project Directory
-bash
-mkdir -p ~/hackrf_drone_detector
-cd ~/hackrf_drone_detector
-2. Install HackRF Tools (Required for Real Hardware)
-bash
-# Ubuntu/Debian
-sudo apt install hackrf
-
-# Windows - Download from:
-# https://github.com/greatscottgadgets/hackrf/releases
-
-# macOS
-brew install hackrf
-
-# Verify installation
-hackrf_info
-3. Download Source Files
-Place the following files in your project directory:
-
-text
-hackrf_drone_detector/
-├── REAL_HackRF_Drone_Detector.c
-├── backend.c
-├── web_ui/
-│   ├── index.html
-│   ├── css/style.css
-│   └── js/
-│       ├── main.js
-│       ├── chart.js
-│       └── websocket.js
-4. Compile the Backend
-bash
-# Linux/WSL
-gcc -o hackrf_drone_detector backend.c \
-    -lhackrf -lfftw3 -lsqlite3 -lm -lpthread -lwebsockets -lliquid \
-    -Wall -O3 -march=native
-
-# Windows (MSYS2)
-gcc -o hackrf_drone_detector.exe backend.c \
-    -lhackrf -lfftw3 -lsqlite3 -lm -lpthread -lwebsockets \
-    -Wall -O3 -march=native
-5. Setup Web UI
-bash
-# Install Python HTTP server (or use any web server)
-cd web_ui
-python3 -m http.server 8080 &
-
-# Or use nginx
-# Or use the built-in server from backend (future feature)
-🚀 Quick Start
-Step 1: Connect Hardware
-Connect HackRF One via USB 3.0
-
-Attach 2.4GHz antenna to ANT port
-
-Verify device detection: hackrf_info
-
-Step 2: Start Backend
-bash
-# Linux (requires sudo for USB access)
-sudo ./hackrf_drone_detector
-
-# Windows (run as Administrator)
-./hackrf_drone_detector.exe
-Expected output:
-
-text
-╔════════════════════════════════════════════════════════╗
-║     HackRF Drone Detection System v2.0 - Initializing   ║
-╚════════════════════════════════════════════════════════╝
-
-[Database] Initialized successfully
-[WebSocket] Server started on port 8082
-[System] Initialization complete
-[System] WebSocket server: ws://localhost:8082
-[System] Web UI: http://localhost:8080
-
-[System] Starting sensor threads...
-[System] All threads started. System running...
-Step 3: Open Web Dashboard
-Open browser to http://localhost:8080
-
-You should see:
-
-Real-time spectrum analyzer
-
-Drone detection feed
-
-Confidence trend chart
-
-System metrics
-
-Step 4: Test with a Real Drone
-Power on a DJI drone or FPV transmitter
-
-The system should detect within 5-10 seconds
-
-Check detection feed for drone type and confidence
-
-📁 Project Structure
-text
-hackrf_drone_detector/
-│
-├── backend.c                          # Main backend with WebSocket server
-├── REAL_HackRF_Drone_Detector.c       # Hardware integration version
-├── hackrf_drone_detector              # Compiled binary
-│
-├── web_ui/                            # Web interface
-│   ├── index.html                     # Main dashboard
-│   ├── css/
-│   │   └── style.css                  # Styling
-│   └── js/
-│       ├── main.js                    # Main application logic
-│       ├── chart.js                   # Chart visualization
-│       └── websocket.js               # WebSocket client
-│
-├── data/                              # Data storage
-│   ├── drone_detections.db            # SQLite database
-│   └── logs/                          # System logs
-│
-├── docs/                              # Documentation
-│   ├── API.md                         # API reference
-│   └── HARDWARE.md                    # Hardware setup guide
-│
-└── README.md                          # This file
-⚙ Configuration
-Backend Configuration (backend.c)
-c
-// Frequency bands to scan
-#define SCAN_BANDS {
-    {2400000000, 2483500000, "2.4 GHz Control"},
-    {5725000000, 5850000000, "5.8 GHz Video"},
-    {915000000,  928000000,  "915 MHz ISM"},
-    {433000000,  435000000,  "433 MHz FPV"}
-}
-
-// Detection thresholds
-#define ALERT_THRESHOLD     0.625     // 62.5% confidence triggers alert
-#define CONFIDENCE_MIN      0.3       // Minimum confidence to log detection
-
-// WebSocket server
-#define WS_PORT             8082      // WebSocket server port
-#define HTTP_PORT           8080      // Web UI HTTP port
-
-// HackRF settings
-#define SAMPLE_RATE         20000000  // 20 MSPS (maximum)
-#define CENTER_FREQ         2400000000 // 2.4 GHz default
-Web UI Configuration (web_ui/js/websocket.js)
-javascript
-// WebSocket connection
-const WS_URL = 'ws://localhost:8082';
-
-// Update intervals
-const METRICS_UPDATE_MS = 1000;   // Metrics update rate
-const SPECTRUM_UPDATE_MS = 100;    // Spectrum update rate
-📖 Usage
-Command Line Options
-bash
-# Run with default settings
-./hackrf_drone_detector
-
-# Run with custom frequency (future feature)
-./hackrf_drone_detector --freq 2450000000
-
-# Run with debug logging (future feature)
-./hackrf_drone_detector --debug
-Web Dashboard Features
-Feature	Description
-Spectrum Analyzer	Real-time FFT visualization of current band
-Detection Feed	Scrollable list of detected drones
-Confidence Chart	Historical confidence trend
-System Metrics	Uptime, detection count, processing time
-Threat List	Active threats with severity levels
-Start/Stop	Control scanning process
-Band Selector	Change frequency band
-Database Queries
-bash
-# View all detections
-sqlite3 drone_detections.db "SELECT * FROM detections;"
-
-# View recent critical threats
-sqlite3 drone_detections.db \
-    "SELECT timestamp, drone_type, threat_level FROM detections \
-     WHERE threat_level IN ('CRITICAL', 'HIGH') \
-     ORDER BY timestamp DESC LIMIT 10;"
-
-# Detection statistics
-sqlite3 drone_detections.db \
-    "SELECT drone_type, COUNT(*) as count, AVG(fusion_confidence) as avg_conf \
-     FROM detections GROUP BY drone_type;"
-🔌 API Documentation
-WebSocket Messages
-Server to Client
-Detection Event
+Sent when a drone is detected.
 
 json
 {
@@ -281,12 +41,33 @@ json
         "threat_level": "HIGH",
         "position": [45.2, -120.1, 50.3],
         "velocity": [12.5, -3.2, 0],
-        "bandwidth": 40.2,
+        "bandwidth": 40200000,
         "snr": 28.5,
-        "signal_strength": -65.3
+        "signal_strength": -65.3,
+        "modulation": "OFDM",
+        "frequency": 2445000000,
+        "sensor_count": 3
     }
 }
-Metrics Update
+Fields:
+
+Field	Type	Unit	Description
+timestamp	string	ISO datetime	Detection time
+drone_type	string	-	Identified drone model
+confidence	float	0-1	Detection confidence
+threat_level	string	-	CRITICAL/HIGH/MEDIUM/LOW/NEGLIGIBLE
+position[3]	array	meters	[x, y, z] coordinates
+velocity[3]	array	m/s	[vx, vy, vz] velocity
+bandwidth	integer	Hz	Signal bandwidth
+snr	float	dB	Signal-to-noise ratio
+signal_strength	float	dBm	Received signal power
+modulation	string	-	OFDM/FHSS/DSSS/ANALOG_FM
+frequency	integer	Hz	Center frequency
+sensor_count	integer	-	Number of sensors contributing
+1.2 Metrics Update
+Type: metrics
+
+System performance metrics sent periodically.
 
 json
 {
@@ -296,187 +77,548 @@ json
         "true_positives": 42,
         "false_positives": 5,
         "avg_processing_time": 23.5,
-        "sensor_uptime": [3600, 3598, 3600, 3595],
+        "sensor_uptime": [3600.5, 3598.2, 3600.0, 3595.8],
         "system_uptime": 3602.5,
-        "active_sensors": 4
+        "active_sensors": 4,
+        "cpu_usage": 32.5,
+        "memory_usage": 156.8,
+        "detection_rate": 0.35
     }
 }
-Alert
+Fields:
+
+Field	Type	Unit	Description
+total_detections	integer	-	Total detections since start
+true_positives	integer	-	Correct detections
+false_positives	integer	-	False alarms
+avg_processing_time	float	ms	Average processing latency
+sensor_uptime[4]	array	seconds	Uptime per sensor [RF, LIDAR, Camera, Radar]
+system_uptime	float	seconds	System runtime
+active_sensors	integer	-	Number of active sensors
+cpu_usage	float	%	CPU utilization
+memory_usage	float	MB	RAM usage
+detection_rate	float	detections/sec	Current detection frequency
+1.3 Alert
+Type: alert
+
+Critical or high-threat detections trigger alerts.
 
 json
 {
     "type": "alert",
     "data": {
-        "message": "CRITICAL: Military Drone detected",
+        "message": "CRITICAL: Military Drone detected within 100m",
         "drone_type": "Military Drone",
         "threat_level": "CRITICAL",
         "timestamp": "2024-01-15 14:30:22",
-        "position": [120.5, -45.2, 35.8]
+        "position": [120.5, -45.2, 35.8],
+        "velocity": [25.3, -5.1, 2.0],
+        "recommended_action": "EVACUATE_AREA"
     }
 }
-Client to Server
+Threat Levels & Recommended Actions:
+
+Level	Score	Color	Recommended Action
+CRITICAL	80-100	🔴 Red	EVACUATE_AREA, NOTIFY_AUTHORITIES
+HIGH	60-79	🟠 Orange	INCREASE_ALERT, PREPARE_COUNTERMEASURES
+MEDIUM	40-59	🟡 Yellow	MONITOR_CLOSELY, LOG_DETECTION
+LOW	20-39	🔵 Blue	ROUTINE_MONITORING
+NEGLIGIBLE	0-19	⚪ Gray	IGNORE
+1.4 Plot Data
+Type: plot_data
+
+Confidence trend data for visualization.
+
 json
-// Start scanning
+{
+    "type": "plot_data",
+    "data": {
+        "event_numbers": [1, 2, 3, 4, 5],
+        "confidences": [0.45, 0.62, 0.78, 0.85, 0.92],
+        "timestamps": ["14:30:22", "14:30:25", "14:30:28", "14:30:31", "14:30:34"]
+    }
+}
+1.5 Spectrum Data
+Type: spectrum
+
+Real-time FFT data for spectrum analyzer.
+
+json
+{
+    "type": "spectrum",
+    "data": {
+        "frequencies": [2400000000, 2401000000, ..., 2483500000],
+        "amplitudes": [-85.2, -82.1, -78.5, ..., -92.3],
+        "center_freq": 2441750000,
+        "span": 83500000,
+        "peak_freq": 2445000000,
+        "peak_amplitude": -65.3,
+        "timestamp": 1705325422
+    }
+}
+1.6 Status
+Type: status
+
+System status updates.
+
+json
+{
+    "type": "status",
+    "data": {
+        "state": "RUNNING",
+        "mode": "AUTO_SCAN",
+        "current_band": "2.4 GHz",
+        "current_freq": 2445000000,
+        "scan_progress": 65,
+        "message": "Scanning 2.4 GHz band"
+    }
+}
+States:
+
+State	Description
+RUNNING	Normal operation
+PAUSED	Scanning paused
+ERROR	System error
+CALIBRATING	Performing calibration
+SCANNING	Actively scanning bands
+2. Client → Server Messages
+2.1 Start Scanning
+Start or resume drone detection.
+
+json
 "start"
+Response: None (status update via status message)
 
-// Stop scanning
+2.2 Stop Scanning
+Pause drone detection.
+
+json
 "stop"
+Response: None (status update via status message)
 
-// Clear detection history
+2.3 Clear Detections
+Clear detection history and reset plots.
+
+json
 "clear_detections"
+Response: None
 
-// Change frequency (Hz)
+2.4 Set Frequency
+Change center frequency.
+
+json
 "set_freq:2450000000"
-🗄 Database Schema
-detections Table
-Column	Type	Description
-id	INTEGER PRIMARY KEY	Auto-incrementing ID
-timestamp	TEXT	Detection time (ISO format)
-drone_type	TEXT	Identified drone model
-drone_model	TEXT	Specific model variant
-dominant_freq	REAL	Detected frequency (Hz)
-signal_strength	REAL	Signal power (dBm)
-position_x	REAL	X coordinate (meters)
-position_y	REAL	Y coordinate (meters)
-position_z	REAL	Z coordinate / altitude
-velocity_x	REAL	X velocity (m/s)
-velocity_y	REAL	Y velocity (m/s)
-velocity_z	REAL	Z velocity (m/s)
-range_distance	REAL	Distance from sensor
-visual_confidence	REAL	Camera confidence (0-1)
-fusion_confidence	REAL	Fused confidence (0-1)
-threat_level	TEXT	CRITICAL/HIGH/MEDIUM/LOW/NEGLIGIBLE
-sensor_count	INTEGER	Number of sensors contributing
-detection_method	TEXT	"multi-sensor" or "rf-only"
-🐛 Troubleshooting
-HackRF Not Detected
-Issue: hackrf_info shows no devices
+Format: set_freq:<frequency_hz>
 
-Solutions:
+Valid Frequencies:
+
+Band	Frequency Range
+433 MHz	433000000 - 435000000
+915 MHz	915000000 - 928000000
+2.4 GHz	2400000000 - 2483500000
+5.8 GHz	5725000000 - 5850000000
+2.5 Set Band
+Switch to a predefined band.
+
+json
+"set_band:2.4"
+Valid Bands:
+
+set_band:433 - 433 MHz band
+
+set_band:915 - 915 MHz band
+
+set_band:2.4 - 2.4 GHz band
+
+set_band:5.8 - 5.8 GHz band
+
+2.6 Set Gain
+Adjust RF gain settings.
+
+json
+"set_gain:32:20"
+Format: set_gain:<lna_gain>:<vga_gain>
+
+Parameter	Range	Default	Description
+lna_gain	0-40 dB	32	Low Noise Amplifier
+vga_gain	0-62 dB	20	Variable Gain Amplifier
+2.7 Set Threshold
+Adjust alert confidence threshold.
+
+json
+"set_threshold:0.75"
+Format: set_threshold:<value>
+
+Range: 0.0 - 1.0 (default: 0.625)
+
+2.8 Request Metrics
+Request immediate metrics update.
+
+json
+"get_metrics"
+Response: metrics message
+
+2.9 Request Spectrum
+Request current spectrum data.
+
+json
+"get_spectrum"
+Response: spectrum message
+
+2.10 Calibrate
+Perform system calibration.
+
+json
+"calibrate"
+Response: status message with calibration progress
+
+2.11 Export Data
+Export detection data to file.
+
+json
+"export:csv"
+Formats:
+
+export:csv - CSV format
+
+export:json - JSON format
+
+export:sqlite - SQLite database
+
+Response: File download via separate HTTP endpoint
+
+🔌 HTTP REST API (Optional)
+For non-realtime operations, HTTP endpoints are available on port 8081.
+
+GET /api/detections
+Get recent detections.
+
+http
+GET /api/detections?limit=10&offset=0&threat=HIGH
+Parameters:
+
+Parameter	Type	Default	Description
+limit	int	50	Number of records
+offset	int	0	Pagination offset
+threat	string	ALL	Filter by threat level
+from	timestamp	-	Start date
+to	timestamp	-	End date
+Response:
+
+json
+{
+    "total": 47,
+    "detections": [
+        {
+            "id": 1,
+            "timestamp": "2024-01-15 14:30:22",
+            "drone_type": "DJI Mavic",
+            "confidence": 0.85,
+            "threat_level": "HIGH"
+        }
+    ]
+}
+GET /api/stats
+Get system statistics.
+
+http
+GET /api/stats
+Response:
+
+json
+{
+    "total_detections_24h": 124,
+    "by_drone_type": {
+        "DJI Phantom": 45,
+        "DJI Mavic": 38,
+        "FPV Racing": 22,
+        "Military Drone": 12,
+        "Other": 7
+    },
+    "by_threat": {
+        "CRITICAL": 8,
+        "HIGH": 23,
+        "MEDIUM": 45,
+        "LOW": 38,
+        "NEGLIGIBLE": 10
+    },
+    "avg_confidence": 0.72,
+    "peak_detection_hour": 14
+}
+GET /api/bands
+Get available frequency bands.
+
+http
+GET /api/bands
+Response:
+
+json
+{
+    "bands": [
+        {
+            "name": "2.4 GHz Control",
+            "min_freq": 2400000000,
+            "max_freq": 2483500000,
+            "active": true,
+            "detected_drones": ["DJI", "FrSky", "ELRS"]
+        },
+        {
+            "name": "5.8 GHz Video",
+            "min_freq": 5725000000,
+            "max_freq": 5850000000,
+            "active": true,
+            "detected_drones": ["Analog", "DJI", "WalkSnail"]
+        }
+    ]
+}
+POST /api/alert/acknowledge
+Acknowledge an alert.
+
+http
+POST /api/alert/acknowledge
+Content-Type: application/json
+
+{
+    "alert_id": "alert_1705325422",
+    "action_taken": "NOTIFIED_SECURITY",
+    "operator": "admin"
+}
+Response:
+
+json
+{
+    "success": true,
+    "message": "Alert acknowledged"
+}
+📊 WebSocket Event Flow Diagram
+text
+Client                          Server
+  |                               |
+  |--- WS Connect --------------->|
+  |<-- Connection Established ----|
+  |                               |
+  |--- "start" ------------------>|
+  |                               |
+  |<-- status (RUNNING) ----------|
+  |<-- spectrum (update) ---------|
+  |<-- detection (drone found) ---|
+  |<-- alert (if critical) -------|
+  |<-- metrics (periodic) --------|
+  |                               |
+  |--- "set_band:2.4" ----------->|
+  |<-- status (SCANNING) ---------|
+  |                               |
+  |--- "stop" ------------------->|
+  |<-- status (PAUSED) -----------|
+  |                               |
+  |--- "clear_detections" ------->|
+  |<-- plot_data (reset) ---------|
+  |                               |
+  |--- WS Disconnect -------------|
+🛠 Error Handling
+Error Response Format
+json
+{
+    "type": "error",
+    "data": {
+        "code": 4001,
+        "message": "Invalid frequency",
+        "details": "Frequency must be between 2400 MHz and 2483.5 MHz",
+        "timestamp": "2024-01-15 14:30:22"
+    }
+}
+Error Codes
+Code	Name	Description
+1000	AUTH_FAILED	Authentication failed
+1001	CONNECTION_LOST	WebSocket connection lost
+2000	INVALID_COMMAND	Unknown command
+2001	INVALID_PARAMETER	Invalid parameter value
+2002	INVALID_FREQUENCY	Frequency out of range
+3000	HARDWARE_ERROR	HackRF device error
+3001	USB_ERROR	USB communication error
+3002	RF_OVERRANGE	RF input out of range
+4000	DATABASE_ERROR	SQLite error
+4001	QUERY_FAILED	Database query failed
+5000	INTERNAL_ERROR	Internal system error
+🔒 Authentication (If Enabled)
+For production deployments, include authentication token:
+
+javascript
+// Connect with authentication
+const ws = new WebSocket('ws://localhost:8082?token=your_api_token');
+
+// Or send after connection
+ws.send('auth:your_api_token');
+API Keys
+Generate API key:
 
 bash
-# Linux: Check USB permissions
-sudo usermod -a -G plugdev $USER
-sudo cp ./host/udev/53-hackrf.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules && sudo udevadm trigger
+curl -X POST http://localhost:8081/api/auth/generate \
+    -H "Content-Type: application/json" \
+    -d '{"role": "admin", "expires": "2024-12-31"}'
+Response:
 
-# Windows: Install driver with Zadig
-# - Download Zadig from https://zadig.akeo.ie/
-# - Options → List All Devices
-# - Select "HackRF One"
-# - Install WinUSB driver
+json
+{
+    "api_key": "hkdf_1234567890abcdef",
+    "expires": "2024-12-31 23:59:59"
+}
+📈 Rate Limiting
+Endpoint	Limit	Window
+WebSocket messages	100/sec	1 second
+HTTP GET	60/min	1 minute
+HTTP POST	30/min	1 minute
+Export requests	10/hour	1 hour
+Rate limit exceeded response:
 
-# Check USB cable (use USB 3.0 cable)
-# Try different USB port
-Compilation Errors
-Issue: fatal error: libhackrf/hackrf.h: No such file
+json
+{
+    "error": "Rate limit exceeded",
+    "retry_after": 60,
+    "limit": 60,
+    "remaining": 0
+}
+🧪 Example Client Implementations
+JavaScript (Browser)
+javascript
+class DroneDetectionClient {
+    constructor(url) {
+        this.ws = new WebSocket(url);
+        this.setupEventHandlers();
+    }
+    
+    setupEventHandlers() {
+        this.ws.onopen = () => {
+            console.log('Connected');
+            this.start();
+        };
+        
+        this.ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            this.handleMessage(msg);
+        };
+        
+        this.ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
+    
+    handleMessage(msg) {
+        switch(msg.type) {
+            case 'detection':
+                this.onDetection(msg.data);
+                break;
+            case 'alert':
+                this.onAlert(msg.data);
+                break;
+            case 'metrics':
+                this.onMetrics(msg.data);
+                break;
+        }
+    }
+    
+    start() { this.ws.send('start'); }
+    stop() { this.ws.send('stop'); }
+    setBand(band) { this.ws.send(`set_band:${band}`); }
+    
+    onDetection(detection) {
+        console.log(`Drone detected: ${detection.drone_type}`);
+        // Update UI
+    }
+    
+    onAlert(alert) {
+        console.warn(`ALERT: ${alert.message}`);
+        // Show notification
+    }
+    
+    onMetrics(metrics) {
+        console.log(`Detections: ${metrics.total_detections}`);
+        // Update dashboard
+    }
+}
 
-Solutions:
+// Usage
+const client = new DroneDetectionClient('ws://localhost:8082');
+Python Client
+python
+import asyncio
+import websockets
+import json
 
-bash
-# Ubuntu
-sudo apt install libhackrf-dev
+class DroneDetectionClient:
+    def __init__(self, uri="ws://localhost:8082"):
+        self.uri = uri
+        self.websocket = None
+        
+    async def connect(self):
+        self.websocket = await websockets.connect(self.uri)
+        print("Connected to drone detection system")
+        
+    async def start(self):
+        await self.websocket.send("start")
+        
+    async def stop(self):
+        await self.websocket.send("stop")
+        
+    async def set_band(self, band):
+        await self.websocket.send(f"set_band:{band}")
+        
+    async def listen(self):
+        async for message in self.websocket:
+            data = json.loads(message)
+            if data['type'] == 'detection':
+                print(f"🚁 Drone: {data['data']['drone_type']} "
+                      f"({data['data']['confidence']*100:.0f}% confidence)")
+            elif data['type'] == 'alert':
+                print(f"🚨 ALERT: {data['data']['message']}")
+                
+    async def run(self):
+        await self.connect()
+        await self.start()
+        await self.listen()
 
-# Windows (MSYS2)
-pacman -S mingw-w64-x86_64-hackrf
+# Usage
+async def main():
+    client = DroneDetectionClient()
+    await client.run()
 
-# macOS
-brew install hackrf
-Issue: undefined reference to lws_*
+asyncio.run(main())
+C++ Client (Qt)
+cpp
+#include <QtWebSockets/QWebSocket>
+#include <QJsonDocument>
+#include <QJsonObject>
 
-Solutions:
-
-bash
-# Ubuntu
-sudo apt install libwebsockets-dev
-
-# Windows (MSYS2)
-pacman -S mingw-w64-x86_64-libwebsockets
-WebSocket Connection Failed
-Issue: Browser shows "WebSocket connection failed"
-
-Solutions:
-
-bash
-# Check if backend is running
-ps aux | grep hackrf_drone_detector
-
-# Check port 8082 is open
-netstat -an | grep 8082
-
-# Firewall may be blocking - allow port 8082
-# Ubuntu: sudo ufw allow 8082
-# Windows: Add firewall rule for inbound port 8082
-No Drone Detections
-Issue: System runs but no detections appear
-
-Solutions:
-
-bash
-# 1. Verify HackRF is receiving
-hackrf_sweep -f 2400000000:2483500000 -w 1000000
-
-# 2. Test with known RF source (e.g., RC transmitter)
-
-# 3. Increase gain settings
-# Edit backend.c: set LNA gain to 40, VGA to 30
-
-# 4. Check antenna connection and orientation
-
-# 5. Move closer to drone (optimal range: 50-500m)
-High False Positives
-Issue: System detects drones when none present
-
-Solutions:
-
-bash
-# 1. Increase confidence threshold
-# Edit ALERT_THRESHOLD in backend.c (increase from 0.625 to 0.75)
-
-# 2. Enable noise filtering
-# Implement moving average on power spectrum
-
-# 3. Reduce gain to avoid noise amplification
-hackrf_set_lna_gain(device, 16);  // Reduce from 32
-📊 Performance Benchmarks
-Metric	Value
-Detection Range (2.4GHz)	500-1000m (line of sight)
-Detection Range (5.8GHz)	300-600m
-Processing Latency	<50ms
-CPU Usage (RPi 4)	25-35%
-Memory Usage	~150MB
-Database Size per 1000 detections	~2MB
-🤝 Contributing
-Fork the repository
-
-Create feature branch (git checkout -b feature/amazing)
-
-Commit changes (git commit -m 'Add amazing feature')
-
-Push to branch (git push origin feature/amazing)
-
-Open Pull Request
-
-Development Guidelines
-Follow C99 standard
-
-Comment complex logic
-
-Update documentation for new features
-
-Test with real hardware when possible
-
-📄 License
-MIT License - See LICENSE file for details.
-
-⚠️ Disclaimer
-This software is for educational and research purposes only. Users are responsible for complying with all applicable laws and regulations regarding drone detection and RF monitoring. Always respect privacy laws and obtain necessary permissions before deploying detection systems.
-
-🙏 Acknowledgments
-Great Scott Gadgets for HackRF One
-
-libhackrf developers
-
-FFTW for fast Fourier transforms
-
-libwebsockets for WebSocket support
+class DroneDetectionClient : public QObject {
+    Q_OBJECT
+private:
+    QWebSocket m_webSocket;
+    
+public:
+    DroneDetectionClient() {
+        connect(&m_webSocket, &QWebSocket::connected, 
+                this, &DroneDetectionClient::onConnected);
+        connect(&m_webSocket, &QWebSocket::textMessageReceived,
+                this, &DroneDetectionClient::onMessageReceived);
+    }
+    
+    void connectToServer() {
+        m_webSocket.open(QUrl("ws://localhost:8082"));
+    }
+    
+private slots:
+    void onConnected() {
+        qDebug() << "Connected to drone detection system";
+        m_webSocket.sendTextMessage("start");
+    }
+    
+    void onMessageReceived(QString message) {
+        QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+        QJsonObject obj = doc.object();
+        
+        if (obj["type"].toString() == "detection") {
+            QJsonObject data = obj["data"].toObject();
+            qDebug() << "Drone detected:" << data["drone_type"].toString();
+        }
+    }
+};
