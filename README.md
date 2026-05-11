@@ -1,576 +1,538 @@
-drone-detector/data/iq/replay/README.md - IQ Replay Dataset Documentation
-Here's the complete README documentation for the IQ replay dataset directory.
+drone-detector/data/iq/live/README.md - Live IQ Recordings Documentation
 
 markdown
-# IQ Replay Dataset Directory
+# Live IQ Recordings Directory
 
-This directory contains pre-recorded IQ datasets for replay testing of the Drone Detection System. These datasets enable reproducible testing, algorithm development, and system validation without requiring live drone flights or hardware.
+This directory stores live IQ recordings captured by the Drone Detection System during real-time operation. These recordings are used for forensic analysis, training data collection, and incident documentation.
 
 ## Directory Structure
-data/iq/replay/
+data/iq/live/
 ├── README.md # This file
-├── dji_mavic_2.4g/ # DJI Mavic 2.4 GHz recordings
-│ ├── recording_001.iq
-│ ├── recording_001.json
-│ ├── recording_002.iq
-│ ├── recording_002.json
+├── session_20240115_143022/ # Session-based recordings
+│ ├── frame_000000.iq # Raw IQ data frame
+│ ├── frame_000000.json # Frame metadata
+│ ├── frame_000001.iq
+│ ├── frame_000001.json
 │ ├── ...
-│ └── dataset_info.json
-├── dji_mavic_5.8g/ # DJI Mavic 5.8 GHz recordings
-│ ├── recording_001.iq
-│ ├── ...
-│ └── dataset_info.json
-├── dji_mini_2.4g/ # DJI Mini 2.4 GHz recordings
-│ ├── recording_001.iq
-│ ├── ...
-│ └── dataset_info.json
-├── fpv_analog_5.8g/ # FPV Analog 5.8 GHz recordings
-│ ├── recording_001.iq
-│ ├── ...
-│ └── dataset_info.json
-├── fpv_digital_5.8g/ # FPV Digital 5.8 GHz recordings
-│ ├── recording_001.iq
-│ ├── ...
-│ └── dataset_info.json
-├── autel_evo_2.4g/ # Autel EVO 2.4 GHz recordings
-│ ├── recording_001.iq
-│ ├── ...
-│ └── dataset_info.json
-├── skydio_2_2.4g/ # Skydio 2 2.4 GHz recordings
-│ ├── recording_001.iq
-│ ├── ...
-│ └── dataset_info.json
-├── noise_only/ # Background noise recordings
-│ ├── urban_noise.iq
-│ ├── suburban_noise.iq
-│ ├── rural_noise.iq
-│ ├── industrial_noise.iq
-│ ├── office_noise.iq
-│ └── dataset_info.json
-├── interference/ # Interference recordings
-│ ├── wifi_2.4g.iq
-│ ├── wifi_5g.iq
-│ ├── bluetooth.iq
-│ ├── microwave.iq
-│ ├── radar.iq
-│ └── dataset_info.json
-├── mixed_scenarios/ # Combined scenarios
-│ ├── drone_with_wifi.iq
-│ ├── multiple_drones.iq
-│ ├── fading_environment.iq
-│ └── dataset_info.json
-└── index.json # Global dataset index
+│ ├── session_metadata.json # Session information
+│ └── detection_events.json # Detections during session
+├── session_20240116_091533/
+│ └── ...
+├── session_20240117_162248/
+│ └── ...
+└── index.json # Global recording index
 
 text
 
-## Dataset Overview
+## Session Naming Convention
 
-### Drone Type Datasets
+Sessions are named using the following format:
+session_YYYYMMDD_HHMMSS
 
-| Dataset | Drone Type | Frequency | Duration | Files | Total Size |
-|---------|------------|-----------|----------|-------|------------|
-| `dji_mavic_2.4g` | DJI Mavic 3 | 2.4 GHz | 600s | 20 | 4.8 GB |
-| `dji_mavic_5.8g` | DJI Mavic 3 | 5.8 GHz | 600s | 20 | 9.6 GB |
-| `dji_mini_2.4g` | DJI Mini 3 | 2.4 GHz | 300s | 10 | 2.4 GB |
-| `fpv_analog_5.8g` | FPV Analog | 5.8 GHz | 300s | 10 | 2.4 GB |
-| `fpv_digital_5.8g` | FPV Digital | 5.8 GHz | 300s | 10 | 4.8 GB |
-| `autel_evo_2.4g` | Autel EVO II | 2.4 GHz | 300s | 10 | 2.4 GB |
-| `skydio_2_2.4g` | Skydio 2 | 2.4 GHz | 300s | 10 | 2.4 GB |
+text
 
-### Environment Datasets
+Where:
+- `YYYY`: 4-digit year
+- `MM`: 2-digit month (01-12)
+- `DD`: 2-digit day (01-31)
+- `HH`: 2-digit hour (00-23)
+- `MM`: 2-digit minute (00-59)
+- `SS`: 2-digit second (00-59)
 
-| Dataset | Environment | Noise Floor | Duration | Files |
-|---------|-------------|-------------|----------|-------|
-| `noise_only/urban` | Urban | -85 dBm | 300s | 5 |
-| `noise_only/suburban` | Suburban | -95 dBm | 300s | 5 |
-| `noise_only/rural` | Rural | -105 dBm | 300s | 5 |
-| `noise_only/industrial` | Industrial | -80 dBm | 300s | 5 |
-| `noise_only/office` | Office | -90 dBm | 300s | 5 |
-
-### Interference Datasets
-
-| Dataset | Interference Type | Frequency | Duration | Files |
-|---------|------------------|-----------|----------|-------|
-| `interference/wifi_2.4g` | 802.11n | 2.4 GHz | 300s | 5 |
-| `interference/wifi_5g` | 802.11ac | 5 GHz | 300s | 5 |
-| `interference/bluetooth` | BLE | 2.4 GHz | 300s | 5 |
-| `interference/microwave` | Microwave Oven | 2.4 GHz | 300s | 5 |
-| `interference/radar` | Weather Radar | 5.6 GHz | 300s | 5 |
-
-### Mixed Scenarios
-
-| Dataset | Description | Duration | Files |
-|---------|-------------|----------|-------|
-| `mixed_scenarios/drone_with_wifi` | Drone + WiFi interference | 300s | 10 |
-| `mixed_scenarios/multiple_drones` | Multiple drones simultaneous | 300s | 10 |
-| `mixed_scenarios/fading_environment` | Multipath fading simulation | 300s | 10 |
+Example: `session_20240115_143022` = January 15, 2024 at 14:30:22
 
 ## File Formats
 
-### Recording File (.iq)
-
-Standard IQ binary format:
+### IQ Data Files (.iq)
 
 | Property | Value |
 |----------|-------|
 | Format | Raw binary |
 | Data Type | `np.complex64` |
-| Sample Size | 8 bytes |
+| Sample Size | 8 bytes (4 bytes real + 4 bytes imag) |
 | Endianness | Little-endian |
+| No Header | Direct sample data only |
 
-### Recording Metadata (.json)
+### Frame Metadata (.json)
+
+Each IQ frame has a corresponding metadata file:
 
 ```json
 {
-  "recording_id": "recording_001",
-  "dataset": "dji_mavic_2.4g",
-  "drone_type": "DJI Mavic 3",
-  "manufacturer": "DJI",
-  "frequency_hz": 2412000000,
+  "frame_id": 0,
+  "timestamp": "2024-01-15T14:30:22.123456Z",
   "sample_rate": 10000000,
-  "duration_seconds": 30.0,
-  "num_samples": 300000000,
-  "snr_db": 15.0,
-  "modulation": "OFDM",
-  "bandwidth_hz": 20000000,
-  "recording_date": "2024-01-15T10:30:00Z",
-  "source": "field_recording",
-  "location": {
-    "latitude": 37.7749,
-    "longitude": -122.4194
+  "center_frequency": 2440000000,
+  "num_samples": 16384000,
+  "duration_seconds": 1.6384,
+  "gain_settings": {
+    "lna_gain_db": 16,
+    "vga_gain_db": 20,
+    "amp_enabled": false
   },
-  "equipment": {
-    "sdr": "HackRF One",
-    "antenna": "2.4 GHz Yagi",
-    "gain_db": 20
+  "antenna": {
+    "port": 1,
+    "type": "omnidirectional",
+    "gain_dbi": 3.0
   },
-  "weather": {
-    "temperature_c": 22,
-    "humidity_pct": 45,
-    "wind_speed_ms": 3.5
-  },
-  "validated": true,
-  "validation_confidence": 0.95
+  "trigger_source": "manual",
+  "metadata": {
+    "operator": "admin",
+    "notes": "DJI Mavic 3 detected"
+  }
 }
-Dataset Info (dataset_info.json)
+Session Metadata (session_metadata.json)
 json
 {
-  "dataset_name": "dji_mavic_2.4g",
-  "version": "2.0.0",
-  "description": "DJI Mavic 3 OcuSync 4.0 recordings at 2.4 GHz",
-  "drone_type": "DJI Mavic 3",
-  "manufacturer": "DJI",
-  "frequency_band": "2.4 GHz ISM",
-  "center_frequency": 2412000000,
+  "session_id": "session_20240115_143022",
+  "created_at": "2024-01-15T14:30:22.123456Z",
+  "closed_at": "2024-01-15T14:35:45.678901Z",
+  "duration_seconds": 323.555445,
+  "num_frames": 198,
+  "total_samples": 3244032000,
+  "total_size_bytes": 25952256000,
   "sample_rate": 10000000,
-  "total_duration_seconds": 600,
-  "num_recordings": 20,
-  "avg_snr_db": 15.0,
-  "recording_conditions": [
-    "clear line of sight",
-    "various distances (50-500m)",
-    "various altitudes (10-120m)",
-    "different speeds (hover to 15m/s)"
-  ],
-  "ground_truth": {
-    "available": true,
-    "format": "json",
-    "includes_position": true,
-    "includes_telemetry": true
+  "center_frequency": 2440000000,
+  "detection_count": 12,
+  "hardware_config": {
+    "device_type": "hackrf",
+    "serial_number": "HACKRF001234",
+    "firmware_version": "2024.02.1"
   },
-  "usage": {
-    "training": 0.7,
-    "validation": 0.15,
-    "test": 0.15
-  }
+  "operator": "admin",
+  "description": "Drone detection incident - unauthorized DJI Mavic 3",
+  "tags": ["incident", "unauthorized", "djia", "mavic_3"]
+}
+Detection Events (detection_events.json)
+json
+{
+  "session_id": "session_20240115_143022",
+  "detections": [
+    {
+      "detection_id": "det_20240115_143022_001",
+      "timestamp": "2024-01-15T14:32:15.234567Z",
+      "frame_id": 45,
+      "sample_offset": 2345678,
+      "drone_type": "DJI Mavic 3",
+      "confidence": 0.95,
+      "threat_level": "HIGH",
+      "frequency": 2440000000,
+      "signal_strength_dbm": -45.2,
+      "snr_db": 28.5,
+      "position": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "altitude_m": 100.0,
+        "accuracy_m": 5.0
+      },
+      "remote_id": {
+        "uas_id": "ABCD1234EFGH5678",
+        "operator_id": "OP12345678",
+        "valid": true
+      }
+    }
+  ]
 }
 Global Index (index.json)
 json
 {
   "version": "2.0.0",
-  "last_updated": "2024-01-15T10:30:00Z",
-  "total_datasets": 12,
-  "total_recordings": 115,
-  "total_duration_seconds": 3900,
-  "total_size_bytes": 31200000000,
-  "datasets": [
+  "last_updated": "2024-01-15T14:35:45.678901Z",
+  "total_sessions": 47,
+  "total_recordings": 253,
+  "total_size_bytes": 1234567890123,
+  "total_duration_seconds": 12345.678,
+  "sessions": [
     {
-      "name": "dji_mavic_2.4g",
-      "drone_type": "DJI Mavic 3",
-      "frequency": "2.4 GHz",
-      "num_recordings": 20,
-      "duration_seconds": 600,
-      "size_bytes": 4800000000
-    },
-    {
-      "name": "dji_mavic_5.8g",
-      "drone_type": "DJI Mavic 3",
-      "frequency": "5.8 GHz",
-      "num_recordings": 20,
-      "duration_seconds": 600,
-      "size_bytes": 9600000000
+      "session_id": "session_20240115_143022",
+      "created_at": "2024-01-15T14:30:22Z",
+      "duration_seconds": 323.56,
+      "num_frames": 198,
+      "size_bytes": 25952256000,
+      "detection_count": 12,
+      "has_remote_id": true,
+      "tags": ["incident", "unauthorized"]
     }
   ],
-  "statistics": {
-    "total_by_drone_type": {
-      "DJI Mavic 3": 40,
-      "DJI Mini 3": 10,
-      "FPV Analog": 10,
-      "FPV Digital": 10,
-      "Autel EVO II": 10,
-      "Skydio 2": 10
-    },
-    "total_by_environment": {
-      "urban": 5,
-      "suburban": 5,
-      "rural": 5,
-      "industrial": 5,
-      "office": 5
-    }
+  "storage_stats": {
+    "used_bytes": 1234567890123,
+    "used_gb": 1234.57,
+    "quota_gb": 5000,
+    "free_gb": 3765.43,
+    "oldest_session": "2023-12-01T08:00:00Z",
+    "newest_session": "2024-01-15T14:35:45Z"
   }
 }
-Loading and Playback
-Basic Loading
+Recording Sessions
+Starting a Session
+Sessions can be started in several ways:
+
+1. Manual Recording
+python
+from infrastructure.signal_io.recorder import IQRecorder, RecordingConfig
+
+recorder = IQRecorder(RecordingConfig(
+    output_dir="data/iq/live",
+    session_name="manual_recording"
+))
+
+recording_id = await recorder.start_recording(
+    session_name="drone_incident_001",
+    metadata={"operator": "admin", "reason": "suspicious drone"}
+)
+2. Trigger-Based Recording
+python
+# Automatic recording when drone detected
+async def on_drone_detected(detection):
+    if detection.confidence > 0.8:
+        await recorder.start_recording(
+            session_name=f"detection_{detection.id}",
+            metadata={"trigger": "auto_detection", "confidence": detection.confidence}
+        )
+3. Scheduled Recording
+python
+# Schedule recording during high-risk hours
+await recorder.schedule_recording(
+    start_time=datetime.now().replace(hour=20, minute=0),
+    duration_seconds=3600,  # 1 hour
+    repeat_interval=86400,  # daily
+    metadata={"purpose": "nighttime_monitoring"}
+)
+Stopping a Session
+python
+# Stop current recording
+metadata = await recorder.stop_recording()
+
+print(f"Session saved: {metadata.session_id}")
+print(f"Duration: {metadata.duration_seconds:.2f}s")
+print(f"File size: {metadata.file_size_bytes / 1024 / 1024:.2f} MB")
+Loading Recorded Data
+Load Full Session
 python
 import numpy as np
 import json
 from pathlib import Path
 
-def load_replay_recording(dataset, recording_id):
-    """Load a replay recording"""
-    file_path = Path(f"data/iq/replay/{dataset}/{recording_id}.iq")
-    meta_path = file_path.with_suffix('.json')
+def load_session(session_path):
+    """Load all frames from a session"""
+    session_path = Path(session_path)
     
-    # Load IQ data
-    iq_data = np.fromfile(file_path, dtype=np.complex64)
+    # Load session metadata
+    with open(session_path / "session_metadata.json", 'r') as f:
+        session_meta = json.load(f)
     
-    # Load metadata
-    with open(meta_path, 'r') as f:
-        metadata = json.load(f)
+    # Load all IQ frames
+    frames = []
+    frame_files = sorted(session_path.glob("frame_*.iq"))
     
-    return iq_data, metadata
-
-# Usage
-iq_data, meta = load_replay_recording("dji_mavic_2.4g", "recording_001")
-print(f"Loaded {meta['drone_type']} recording")
-print(f"Duration: {meta['duration_seconds']:.2f}s")
-print(f"Sample rate: {meta['sample_rate']/1e6:.1f} MHz")
-Batch Loading
-python
-def load_dataset(dataset_name):
-    """Load entire dataset"""
-    dataset_path = Path(f"data/iq/replay/{dataset_name}")
-    
-    recordings = []
-    for iq_file in sorted(dataset_path.glob("*.iq")):
+    for iq_file in frame_files:
+        # Load IQ data
         iq_data = np.fromfile(iq_file, dtype=np.complex64)
         
-        with open(iq_file.with_suffix('.json'), 'r') as f:
-            metadata = json.load(f)
+        # Load frame metadata
+        json_file = iq_file.with_suffix('.json')
+        with open(json_file, 'r') as f:
+            frame_meta = json.load(f)
         
-        recordings.append({
+        frames.append({
             'data': iq_data,
-            'metadata': metadata
+            'metadata': frame_meta
         })
     
-    return recordings
+    return session_meta, frames
 
-# Load all DJI Mavic recordings
-recordings = load_dataset("dji_mavic_2.4g")
-print(f"Loaded {len(recordings)} recordings")
-Playback with Engine
+# Usage
+session_meta, frames = load_session("data/iq/live/session_20240115_143022")
+print(f"Loaded {len(frames)} frames, {session_meta['duration_seconds']:.2f}s")
+Load Specific Time Range
+python
+def load_time_range(session_path, start_time, end_time):
+    """Load frames within a specific time range"""
+    session_path = Path(session_path)
+    
+    # Load all frame metadata first
+    frames_data = []
+    
+    for json_file in session_path.glob("frame_*.json"):
+        with open(json_file, 'r') as f:
+            frame_meta = json.load(f)
+        
+        timestamp = datetime.fromisoformat(frame_meta['timestamp'])
+        
+        if start_time <= timestamp <= end_time:
+            iq_file = json_file.with_suffix('.iq')
+            iq_data = np.fromfile(iq_file, dtype=np.complex64)
+            
+            frames_data.append({
+                'data': iq_data,
+                'metadata': frame_meta
+            })
+    
+    return frames_data
+Load Detection Events
+python
+def get_detections_in_session(session_path):
+    """Get all detection events from a session"""
+    session_path = Path(session_path)
+    
+    with open(session_path / "detection_events.json", 'r') as f:
+        events = json.load(f)
+    
+    return events['detections']
+
+# Usage
+detections = get_detections_in_session("data/iq/live/session_20240115_143022")
+for det in detections:
+    print(f"Drone: {det['drone_type']} at {det['timestamp']}")
+Storage Management
+Automatic Rotation
+The system automatically manages storage with the following policies:
+
+Policy	Value
+Max File Size	1 GB per frame
+Max Session Duration	1 hour
+Max Total Storage	100 GB (configurable)
+Retention Period	30 days
+Auto-cleanup	Enabled
+Manual Cleanup
+python
+from infrastructure.signal_io.recorder import IQRecorder
+
+recorder = IQRecorder()
+
+# Delete old sessions (older than 30 days)
+await recorder.cleanup_old_sessions(days=30)
+
+# Delete specific session
+await recorder.delete_session("session_20240115_143022")
+
+# Export session for archiving
+await recorder.export_session("session_20240115_143022", format="zip")
+Storage Monitoring
+python
+def get_storage_stats():
+    """Get storage statistics"""
+    import shutil
+    
+    iq_dir = Path("data/iq/live")
+    total_size = sum(f.stat().st_size for f in iq_dir.rglob("*.iq"))
+    total_gb = total_size / (1024**3)
+    
+    # Get disk usage
+    disk_usage = shutil.disk_usage(iq_dir)
+    
+    return {
+        'total_size_gb': total_gb,
+        'disk_free_gb': disk_usage.free / (1024**3),
+        'disk_used_gb': disk_usage.used / (1024**3),
+        'disk_total_gb': disk_usage.total / (1024**3),
+        'session_count': len(list(iq_dir.glob("session_*")))
+    }
+Export and Conversion
+Export to Different Formats
+python
+from infrastructure.signal_io.file_reader import IQFileReaderFactory
+
+async def export_session(session_path, output_format='npy'):
+    """Export session to different format"""
+    session_path = Path(session_path)
+    
+    for iq_file in session_path.glob("*.iq"):
+        # Read IQ data
+        reader = IQFileReaderFactory.get_reader(iq_file)
+        async with reader:
+            iq_data = await reader.read_all()
+            sample_rate = reader.file_info.sample_rate
+        
+        # Export as NumPy
+        if output_format == 'npy':
+            output_file = iq_file.with_suffix('.npy')
+            np.save(output_file, iq_data)
+        
+        # Export as CSV
+        elif output_format == 'csv':
+            output_file = iq_file.with_suffix('.csv')
+            np.savetxt(output_file, 
+                      np.column_stack((np.real(iq_data), np.imag(iq_data))),
+                      delimiter=',',
+                      header='I,Q')
+        
+        # Export as HDF5
+        elif output_format == 'h5':
+            import h5py
+            output_file = iq_file.with_suffix('.h5')
+            with h5py.File(output_file, 'w') as f:
+                f.create_dataset('iq_data', data=iq_data)
+                f.attrs['sample_rate'] = sample_rate
+Generate Spectrograms from Recordings
+python
+import matplotlib.pyplot as plt
+from scipy import signal
+
+def generate_spectrogram(iq_file, output_file=None):
+    """Generate spectrogram from IQ recording"""
+    import matplotlib.pyplot as plt
+    from scipy import signal
+    
+    # Load IQ data
+    iq_data = np.fromfile(iq_file, dtype=np.complex64)
+    
+    # Load metadata
+    json_file = iq_file.with_suffix('.json')
+    with open(json_file, 'r') as f:
+        metadata = json.load(f)
+    
+    # Compute spectrogram
+    f, t, Sxx = signal.spectrogram(
+        iq_data,
+        fs=metadata['sample_rate'],
+        nperseg=1024,
+        noverlap=512
+    )
+    
+    # Plot
+    plt.figure(figsize=(12, 6))
+    plt.pcolormesh(t, f / 1e6, 10 * np.log10(Sxx + 1e-12), shading='gouraud')
+    plt.colorbar(label='Power (dB)')
+    plt.ylabel('Frequency (MHz)')
+    plt.xlabel('Time (s)')
+    plt.title(f"Spectrogram - {iq_file.name}")
+    
+    if output_file:
+        plt.savefig(output_file, dpi=150, bbox_inches='tight')
+    else:
+        plt.show()
+Playback Recorded Sessions
 python
 from infrastructure.signal_io.playback import IQPlaybackEngine
 
-async def replay_dataset(dataset_name, speed=1.0):
-    """Replay a dataset through the detection pipeline"""
-    
+async def playback_session(session_path, speed=1.0):
+    """Playback a recorded session"""
     engine = IQPlaybackEngine()
     
-    # Add all recordings from dataset
-    dataset_path = Path(f"data/iq/replay/{dataset_name}")
-    for iq_file in dataset_path.glob("*.iq"):
+    # Add all IQ files from session
+    for iq_file in Path(session_path).glob("*.iq"):
         engine.add_file(iq_file)
     
-    # Register detection callback
-    def on_detection(detection):
-        print(f"Detection: {detection['drone_type']} (confidence: {detection['confidence']:.2f})")
-    
-    engine.on_detection(on_detection)
+    # Set playback speed
+    await engine.set_speed(speed)
     
     # Start playback
-    await engine.play(speed=speed)
+    await engine.play()
     
-    # Process frames
+    # Process frames in real-time
     async for chunk in engine:
-        # Run detection on chunk
-        result = detection_pipeline.process(chunk)
-        if result:
-            print(f"Detected: {result}")
+        # Process chunk (e.g., run detection)
+        process_chunk(chunk)
     
     await engine.stop()
-Playback Modes
-1. Normal Playback
+Data Retention Policies
+Retention Category	Duration	Action
+Daily Recordings	7 days	Auto-delete
+Incident Recordings	90 days	Manual delete only
+Training Data	180 days	Archive to cold storage
+False Positives	30 days	Auto-delete
+Calibration Data	365 days	Keep for reference
+Security and Privacy
+Data Sensitivity Levels
+Level	Description	Access	Retention
+Public	No sensitive data	All users	30 days
+Internal	Operational data	Authorized users	90 days
+Confidential	Incident data	Security team	365 days
+Restricted	Remote ID data	Compliance required	90 days
+Data Anonymization
 python
-await engine.play(speed=1.0)  # Real-time playback
-2. Speed Control
+def anonymize_session(session_path):
+    """Remove personally identifiable information from session"""
+    # Remove Remote ID data
+    with open(session_path / "detection_events.json", 'r') as f:
+        events = json.load(f)
+    
+    for detection in events['detections']:
+        if 'remote_id' in detection:
+            # Anonymize UAS ID
+            detection['remote_id']['uas_id'] = hash(detection['remote_id']['uas_id'])
+            detection['remote_id']['operator_id'] = hash(detection['remote_id']['operator_id'])
+    
+    # Save anonymized version
+    with open(session_path / "detection_events_anonymized.json", 'w') as f:
+        json.dump(events, f, indent=2)
+Troubleshooting
+Common Issues
+Issue	Cause	Solution
+Insufficient disk space	Too many recordings	Run cleanup or increase quota
+Corrupted IQ file	Incomplete write	Re-record or restore from backup
+Missing metadata	Recording interrupted	Check session metadata integrity
+Slow playback	Large file size	Reduce sample rate or use chunking
+Recovery Procedures
 python
-await engine.play(speed=0.5)   # Half speed
-await engine.play(speed=2.0)   # Double speed
-await engine.play(speed=0.0)   # Pause
-3. Loop Playback
-python
-from infrastructure.signal_io.playback import PlaybackMode
-
-engine.config.mode = PlaybackMode.LOOP
-await engine.play()  # Infinite loop
-4. Random Access
-python
-await engine.seek(15.0)  # Jump to 15 seconds
-await engine.seek(0)     # Restart
-Testing Scenarios
-Scenario 1: Single Drone Detection
-python
-async def test_single_drone():
-    """Test detection on a single drone recording"""
+def repair_session(session_path):
+    """Attempt to repair a corrupted session"""
+    session_path = Path(session_path)
     
-    iq_data, meta = load_replay_recording("dji_mavic_2.4g", "recording_001")
+    # Check for missing frame files
+    expected_frames = len(list(session_path.glob("frame_*.json")))
+    actual_frames = len(list(session_path.glob("frame_*.iq")))
     
-    # Run detection
-    detections = detection_engine.process(iq_data, meta['sample_rate'])
-    
-    # Verify
-    assert len(detections) > 0
-    assert detections[0]['drone_type'] == meta['drone_type']
-    assert detections[0]['confidence'] > 0.8
-    
-    print(f"✓ Detection successful: {detections[0]['drone_type']}")
-Scenario 2: Interference Rejection
-python
-async def test_interference_rejection():
-    """Test detection in presence of interference"""
-    
-    # Load drone signal
-    drone, drone_meta = load_replay_recording("dji_mavic_2.4g", "recording_001")
-    
-    # Load interference
-    interference, int_meta = load_replay_recording("interference", "wifi_2.4g")
-    
-    # Mix signals (dB scale)
-    drone_power = np.mean(np.abs(drone)**2)
-    int_power = np.mean(np.abs(interference)**2)
-    mix = drone + np.sqrt(int_power/drone_power) * interference[:len(drone)]
-    
-    # Test detection
-    detections = detection_engine.process(mix, drone_meta['sample_rate'])
-    
-    assert len(detections) > 0
-    print(f"✓ Detection successful with {int_meta['interference_type']} interference")
-Scenario 3: Multiple Drones
-python
-async def test_multiple_drones():
-    """Test detection of multiple simultaneous drones"""
-    
-    # Load different drone signals
-    dji, dji_meta = load_replay_recording("dji_mavic_2.4g", "recording_001")
-    fpv, fpv_meta = load_replay_recording("fpv_analog_5.8g", "recording_001")
-    
-    # Combine signals (different frequency bands)
-    mixed = dji + fpv[:len(dji)]
-    
-    # Test detection
-    detections = detection_engine.process(mixed, dji_meta['sample_rate'])
-    
-    # Should detect both drones
-    drone_types = [d['drone_type'] for d in detections]
-    assert "DJI Mavic 3" in drone_types
-    assert "FPV Analog" in drone_types
-    
-    print(f"✓ Detected {len(detections)} drones")
-Scenario 4: Low SNR Performance
-python
-async def test_low_snr():
-    """Test detection at various SNR levels"""
-    
-    iq_data, meta = load_replay_recording("dji_mavic_2.4g", "recording_001")
-    
-    snr_levels = [20, 15, 10, 6, 3, 0]  # dB
-    results = {}
-    
-    for snr in snr_levels:
-        # Add noise to achieve target SNR
-        signal_power = np.mean(np.abs(iq_data)**2)
-        noise_power = signal_power / (10 ** (snr / 10))
-        noise = np.sqrt(noise_power/2) * (np.random.randn(len(iq_data)) + 1j * np.random.randn(len(iq_data)))
-        noisy = iq_data + noise
+    if expected_frames != actual_frames:
+        print(f"Missing {expected_frames - actual_frames} IQ files")
         
-        # Test detection
-        detections = detection_engine.process(noisy, meta['sample_rate'])
-        results[snr] = len(detections) > 0 and detections[0]['confidence']
-    
-    print("SNR Performance:")
-    for snr, conf in results.items():
-        print(f"  {snr} dB: {conf:.2%}" if conf else f"  {snr} dB: Failed")
-Performance Benchmarking
-Benchmark Script
+        # Regenerate missing metadata
+        for json_file in session_path.glob("frame_*.json"):
+            iq_file = json_file.with_suffix('.iq')
+            if not iq_file.exists():
+                print(f"Missing IQ file for {json_file.name}")
+                # Create empty placeholder or skip
+Performance Optimization
+Memory-Mapped Reading
 python
-import time
-import numpy as np
-
-def benchmark_processing(dataset_name, num_iterations=10):
-    """Benchmark processing performance"""
+def load_large_session_mmap(session_path):
+    """Load large session using memory mapping"""
+    session_path = Path(session_path)
     
-    recordings = load_dataset(dataset_name)
-    times = []
+    frames = []
+    for iq_file in sorted(session_path.glob("frame_*.iq")):
+        # Use memory mapping for large files
+        iq_data = np.memmap(iq_file, dtype=np.complex64, mode='r')
+        frames.append(iq_data)
     
-    for i in range(num_iterations):
-        start = time.time()
-        
-        for recording in recordings:
-            # Process recording
-            detection_engine.process(recording['data'], recording['metadata']['sample_rate'])
-        
-        elapsed = time.time() - start
-        times.append(elapsed)
-    
-    avg_time = np.mean(times)
-    std_time = np.std(times)
-    
-    print(f"Dataset: {dataset_name}")
-    print(f"  Recordings: {len(recordings)}")
-    print(f"  Total data: {sum(len(r['data']) for r in recordings) / 1e6:.1f}M samples")
-    print(f"  Avg processing: {avg_time:.2f}s")
-    print(f"  Std dev: {std_time:.2f}s")
-    print(f"  Throughput: {len(recordings) * 30 / avg_time:.1f}x real-time")
-
-# Run benchmark
-benchmark_processing("dji_mavic_2.4g")
-Dataset Validation
-Validate Dataset Integrity
+    return frames
+Batch Processing
 python
-def validate_dataset(dataset_name):
-    """Validate dataset files and metadata"""
+def process_session_batch(session_path, batch_size=10):
+    """Process session in batches to manage memory"""
+    session_path = Path(session_path)
     
-    dataset_path = Path(f"data/iq/replay/{dataset_name}")
+    iq_files = sorted(session_path.glob("frame_*.iq"))
     
-    issues = []
-    
-    # Check all IQ files have matching JSON
-    for iq_file in dataset_path.glob("*.iq"):
-        json_file = iq_file.with_suffix('.json')
-        if not json_file.exists():
-            issues.append(f"Missing metadata: {json_file.name}")
+    for i in range(0, len(iq_files), batch_size):
+        batch = iq_files[i:i+batch_size]
         
-        # Verify IQ file size is multiple of 8 bytes
-        if iq_file.stat().st_size % 8 != 0:
-            issues.append(f"Invalid IQ file size: {iq_file.name}")
-        
-        # Verify data can be loaded
-        try:
+        # Load batch
+        batch_data = []
+        for iq_file in batch:
             data = np.fromfile(iq_file, dtype=np.complex64)
-            if len(data) == 0:
-                issues.append(f"Empty IQ file: {iq_file.name}")
-        except Exception as e:
-            issues.append(f"Cannot load {iq_file.name}: {e}")
-    
-    # Check dataset info
-    info_file = dataset_path / "dataset_info.json"
-    if not info_file.exists():
-        issues.append("Missing dataset_info.json")
-    
-    if issues:
-        print(f"Dataset {dataset_name} has {len(issues)} issues:")
-        for issue in issues[:10]:
-            print(f"  - {issue}")
-        return False
-    
-    print(f"✓ Dataset {dataset_name} is valid")
-    return True
-Export for Training
-python
-def export_for_training(dataset_name, output_dir="training_data"):
-    """Export dataset for ML training"""
-    
-    import shutil
-    
-    output_path = Path(output_dir) / dataset_name
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    recordings = load_dataset(dataset_name)
-    
-    # Create feature extraction
-    from models.training.features.feature_extractor import FeatureExtractor
-    extractor = FeatureExtractor()
-    
-    features = []
-    labels = []
-    
-    for rec in recordings:
-        # Extract features
-        feature_dict = extractor.extract_all_features(rec['data'])
-        feature_vector = np.array([feature_dict[name] for name in FEATURE_NAMES])
-        features.append(feature_vector)
-        labels.append(rec['metadata']['drone_type'])
+            batch_data.append(data)
         
-        # Export IQ data
-        iq_file = output_path / f"{rec['metadata']['recording_id']}.iq"
-        rec['data'].tofile(iq_file)
-    
-    # Save features
-    np.save(output_path / "features.npy", np.array(features))
-    
-    # Save labels
-    with open(output_path / "labels.json", 'w') as f:
-        json.dump(labels, f, indent=2)
-    
-    print(f"Exported {len(recordings)} recordings to {output_path}")
+        # Process batch
+        for data in batch_data:
+            process_chunk(data)
+        
+        # Clear memory
+        del batch_data
 Command Line Interface
 bash
-# List all available datasets
-python -m infrastructure.signal_io.playback --list-datasets
+# List all sessions
+python -m infrastructure.signal_io.recorder --list
 
-# Play a specific recording
-python -m infrastructure.signal_io.playback --dataset dji_mavic_2.4g --recording 001
+# Show session info
+python -m infrastructure.signal_io.recorder --info session_20240115_143022
 
-# Run benchmark
-python -m infrastructure.signal_io.playback --benchmark --dataset dji_mavic_2.4g
+# Export session
+python -m infrastructure.signal_io.recorder --export session_20240115_143022 --format npy
 
-# Validate datasets
-python -m infrastructure.signal_io.playback --validate
+# Playback session
+python -m infrastructure.signal_io.playback --session session_20240115_143022 --speed 2.0
 
-# Export for training
-python -m infrastructure.signal_io.playback --export --dataset dji_mavic_2.4g
-Adding New Datasets
-Dataset Creation Guidelines
-Recording Duration: 30 seconds minimum
-
-Sample Rate: 10 MHz for 2.4 GHz, 20 MHz for 5.8 GHz
-
-SNR: Include SNR in metadata
-
-Ground Truth: Provide position and telemetry if available
-
-Documentation: Update README and index.json
-
-Dataset Submission Checklist
-IQ files in correct format
-
-Metadata JSON files for each recording
-
-Dataset info JSON file
-
-Updated index.json
-
-Updated README
-
-Validation passes
-
-Ground truth data (if available)
-
-Troubleshooting
-Issue	Solution
-File not found	Verify dataset name and recording ID
-Memory error	Use chunked loading for large files
-Playback stutters	Reduce playback speed or use smaller chunks
-Detection fails	Check SNR and signal presence
-Metadata mismatch	Regenerate JSON files from IQ analysis
+# Clean old sessions
+python -m infrastructure.signal_io.recorder --cleanup --days 30
