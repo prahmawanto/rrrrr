@@ -1,356 +1,535 @@
-drone-detector/data/iq/mock/README.md - Mock IQ Data Documentation
+drone-detector/data/iq/synthetic/README.md - Synthetic IQ Data Documentation
 
 markdown
-# Mock IQ Data Directory
+# Synthetic IQ Data Directory
 
-This directory contains synthetic IQ data files for testing and development of the Drone Detection System. These files simulate various drone signals, interference sources, and noise floors to enable comprehensive testing without requiring actual hardware or live drone flights.
+This directory contains synthetically generated IQ data for testing, algorithm development, and system validation. Synthetic data enables controlled experiments with known parameters, edge cases, and scenarios that are difficult to capture in real-world recordings.
 
 ## Directory Structure
-data/iq/mock/
+data/iq/synthetic/
 ├── README.md # This file
-├── dji_mavic_2.4g.iq # DJI Mavic 2.4 GHz signal
-├── dji_mavic_2.4g.json # Metadata for DJI 2.4 GHz
-├── dji_mavic_5.8g.iq # DJI Mavic 5.8 GHz signal
-├── dji_mavic_5.8g.json # Metadata for DJI 5.8 GHz
-├── fpv_analog_5.8g.iq # FPV Analog 5.8 GHz video
-├── fpv_analog_5.8g.json # Metadata for FPV Analog
-├── noise_floor.iq # General noise floor
-├── noise_floor.json # Noise floor metadata
-├── interference_wifi.iq # WiFi interference
-├── interference_wifi.json # WiFi metadata
-├── calibration_signal.iq # Calibration tones
-└── generation_scripts/ # Scripts to regenerate data
-├── generate_dji_mavic.py
-├── generate_fpv_analog.py
-├── generate_noise_floor.py
-└── generate_wifi_interference.py
+├── noise/ # Synthetic noise signals
+│ ├── white_gaussian.iq
+│ ├── white_gaussian.json
+│ ├── pink_noise.iq
+│ ├── pink_noise.json
+│ ├── brown_noise.iq
+│ ├── brown_noise.json
+│ ├── impulsive_noise.iq
+│ ├── impulsive_noise.json
+│ └── dataset_info.json
+├── ofdm/ # OFDM-modulated signals
+│ ├── ofdm_20mhz.iq
+│ ├── ofdm_20mhz.json
+│ ├── ofdm_40mhz.iq
+│ ├── ofdm_40mhz.json
+│ ├── ofdm_80mhz.iq
+│ ├── ofdm_80mhz.json
+│ ├── ofdm_with_cp.iq
+│ ├── ofdm_with_cp.json
+│ └── dataset_info.json
+├── lora/ # LoRa-modulated signals
+│ ├── lora_sf7.iq
+│ ├── lora_sf7.json
+│ ├── lora_sf8.iq
+│ ├── lora_sf8.json
+│ ├── lora_sf9.iq
+│ ├── lora_sf9.json
+│ ├── lora_sf10.iq
+│ ├── lora_sf10.json
+│ ├── lora_sf11.iq
+│ ├── lora_sf11.json
+│ ├── lora_sf12.iq
+│ ├── lora_sf12.json
+│ └── dataset_info.json
+├── fm/ # Frequency Modulation signals
+│ ├── fm_analog.iq
+│ ├── fm_analog.json
+│ ├── fm_digital.iq
+│ ├── fm_digital.json
+│ ├── fm_broadcast.iq
+│ ├── fm_broadcast.json
+│ └── dataset_info.json
+├── test_tones/ # Calibration tones
+│ ├── single_tone.iq
+│ ├── single_tone.json
+│ ├── multi_tone.iq
+│ ├── multi_tone.json
+│ ├── chirp.iq
+│ ├── chirp.json
+│ ├── swept_sine.iq
+│ ├── swept_sine.json
+│ └── dataset_info.json
+└── index.json # Global synthetic index
 
 text
 
-## File Formats
+## Synthetic Signal Types
 
-### IQ Data Files (.iq)
+### 1. Noise Signals (`noise/`)
 
-- **Format**: Raw binary, interleaved 32-bit floats (I, Q)
-- **Data Type**: `np.complex64` (8 bytes per sample)
-- **Endianness**: Little-endian (native system format)
-- **No header**: Direct sample data only
+| File | Type | Characteristics | Use Case |
+|------|------|-----------------|----------|
+| `white_gaussian.iq` | White Gaussian | Flat PSD, Gaussian distribution | Baseline noise testing |
+| `pink_noise.iq` | Pink Noise | 1/f spectrum, natural variation | Environmental simulation |
+| `brown_noise.iq` | Brown Noise | 1/f² spectrum, random walk | Drift simulation |
+| `impulsive_noise.iq` | Impulsive | Burst interference | RFI simulation |
 
-### Metadata Files (.json)
+**Generation Parameters:**
+```python
+# White Gaussian Noise
+duration = 30  # seconds
+sample_rate = 10e6
+noise_power_dbm = -100
+mean = 0
+variance = 10 ** (noise_power_dbm / 10)
+noise = np.sqrt(variance/2) * (np.random.randn(n) + 1j * np.random.randn(n))
+2. OFDM Signals (ofdm/)
+File	Bandwidth	Subcarriers	CP Length	Use Case
+ofdm_20mhz.iq	20 MHz	64	16	WiFi/802.11 simulation
+ofdm_40mhz.iq	40 MHz	128	32	802.11n simulation
+ofdm_80mhz.iq	80 MHz	256	64	802.11ac simulation
+ofdm_with_cp.iq	20 MHz	64	16	DJI OcuSync simulation
+OFDM Parameters:
 
-Each `.iq` file has a corresponding `.json` metadata file containing:
-
-```json
-{
-  "signal_type": "DJI Mavic 3",
-  "center_frequency": 2412000000,
-  "sample_rate": 10000000,
-  "duration_seconds": 30,
-  "num_samples": 300000000,
-  "modulation": "OFDM",
-  "bandwidth": 20000000,
-  "snr_db": 15,
-  "statistics": {
-    "mean": 0.001234,
-    "std": 0.123456,
-    "mean_power_dbm": -45.2,
-    "peak_power_dbm": -30.1
-  },
-  "generation_date": "2024-01-15T10:30:00Z"
+python
+config = {
+    'fft_size': 64,      # or 128, 256
+    'cp_len': 16,        # Cyclic prefix length
+    'num_symbols': 1000,
+    'modulation': 'QPSK',  # BPSK, QPSK, 16-QAM, 64-QAM
+    'null_subcarriers': [0, 32],  # DC and guard bands
+    'pilot_subcarriers': [11, 25, 39, 53]
 }
-Available Mock Data
-1. DJI Mavic Signals
-2.4 GHz Version (dji_mavic_2.4g.iq)
-Parameter	Value
-Frequency	2.412 GHz (Channel 1)
-Sample Rate	10 MHz
-Bandwidth	20 MHz
-Modulation	OFDM (256 subcarriers)
-Cyclic Prefix	64 samples
-SNR	15 dB
-Doppler Shift	50 Hz
-Duration	30 seconds
-Use Case: Testing detection of DJI OcuSync 2.4 GHz transmissions.
+3. LoRa Signals (lora/)
+File	Spreading Factor	Bandwidth	Coding Rate	Data Rate
+lora_sf7.iq	7	125 kHz	4/5	5.47 kbps
+lora_sf8.iq	8	125 kHz	4/5	3.13 kbps
+lora_sf9.iq	9	125 kHz	4/5	1.76 kbps
+lora_sf10.iq	10	125 kHz	4/5	0.98 kbps
+lora_sf11.iq	11	125 kHz	4/5	0.54 kbps
+lora_sf12.iq	12	125 kHz	4/5	0.29 kbps
+LoRa Generation:
 
-5.8 GHz Version (dji_mavic_5.8g.iq)
-Parameter	Value
-Frequency	5.825 GHz
-Sample Rate	20 MHz
-Bandwidth	40 MHz
-Modulation	OFDM (512 subcarriers)
-Cyclic Prefix	128 samples
-SNR	18 dB
-Frequency Hopping	Enabled (8 channels)
-Duration	30 seconds
-Use Case: Testing detection of DJI OcuSync 5.8 GHz transmissions with frequency hopping.
+python
+def generate_lora_symbol(sf, bandwidth, num_samples):
+    """Generate LoRa chirp symbol"""
+    t = np.arange(num_samples) / sample_rate
+    f_start = -bandwidth/2
+    f_end = bandwidth/2
+    chirp_rate = (f_end - f_start) / (num_samples / sample_rate)
+    frequency = f_start + chirp_rate * t
+    return np.exp(1j * 2 * np.pi * np.cumsum(frequency) / sample_rate)
+4. FM Signals (fm/)
+File	Type	Deviation	Bandwidth	Use Case
+fm_analog.iq	Analog FM	75 kHz	200 kHz	Broadcast FM
+fm_digital.iq	Digital FM	25 kHz	100 kHz	FPV Analog video
+fm_broadcast.iq	Broadcast	75 kHz	200 kHz	Radio station simulation
+FM Generation:
 
-2. FPV Analog Signal (fpv_analog_5.8g.iq)
-Parameter	Value
-Frequency	5.800 GHz (Raceband 8)
-Sample Rate	10 MHz
-Bandwidth	8 MHz
-Modulation	FM
-Video Standard	NTSC
-Video Deviation	4.5 MHz
-Audio Subcarrier	4.5 MHz
-SNR	12 dB
-Multipath	Enabled
-Duration	30 seconds
-Use Case: Testing detection of analog FPV video transmissions.
+python
+def generate_fm_signal(message, fc, deviation, sample_rate):
+    """Generate FM modulated signal"""
+    t = np.arange(len(message)) / sample_rate
+    phase = 2 * np.pi * fc * t + 2 * np.pi * deviation * np.cumsum(message) / sample_rate
+    return np.exp(1j * phase)
+5. Test Tones (test_tones/)
+File	Type	Frequencies	Duration	Use Case
+single_tone.iq	Single Frequency	1 MHz	10s	Calibration
+multi_tone.iq	Multiple Frequencies	0.1, 0.5, 1, 2, 5 MHz	10s	IMD testing
+chirp.iq	Linear Chirp	0-10 MHz	10s	Sweep testing
+swept_sine.iq	Swept Sine	0.1-10 MHz	10s	Frequency response
+Generation Scripts
+Basic Noise Generation
+python
+#!/usr/bin/env python3
+"""
+Generate synthetic noise signals
+"""
 
-3. Noise Floor Signals
-General Noise Floor (noise_floor.iq)
-Parameter	Value
-Type	Thermal + Atmospheric
-Sample Rate	10 MHz
-Noise Floor	-100 dBm
-Temperature	290 K
-Duration	30 seconds
-Environment Variants:
+import numpy as np
+import json
+from pathlib import Path
 
-File	Environment	Noise Floor	Characteristics
-noise_floor_urban.iq	Urban	-85 dBm	High interference, impulse noise
-noise_floor_suburban.iq	Suburban	-95 dBm	Moderate interference
-noise_floor_rural.iq	Rural	-105 dBm	Low interference, atmospheric
-noise_floor_industrial.iq	Industrial	-80 dBm	High impulse noise
-noise_floor_office.iq	Office	-90 dBm	WiFi/BT interference
-4. WiFi Interference (interference_wifi.iq)
-Parameter	Value
-Standard	802.11n
-Band	2.4 GHz
-Channel	7
-Frequency	2.442 GHz
-Channel Width	20/40 MHz
-Traffic Type	Continuous
-SNR	20 dB
-Duration	30 seconds
-Standard Variants:
+def generate_white_gaussian_noise(duration=30, sample_rate=10e6, noise_power_dbm=-100):
+    """Generate white Gaussian noise"""
+    n = int(sample_rate * duration)
+    power_linear = 10 ** (noise_power_dbm / 10)
+    noise = np.sqrt(power_linear/2) * (np.random.randn(n) + 1j * np.random.randn(n))
+    return noise.astype(np.complex64)
 
-File	Standard	Max Rate	Band
-interference_wifi_802.11b.iq	802.11b	11 Mbps	2.4 GHz
-interference_wifi_802.11g.iq	802.11g	54 Mbps	2.4 GHz
-interference_wifi_802.11n.iq	802.11n	600 Mbps	2.4/5 GHz
-interference_wifi_802.11ac.iq	802.11ac	3.5 Gbps	5 GHz
-5. Calibration Signal (calibration_signal.iq)
-Parameter	Value
-Tones	±2 MHz, ±1 MHz, ±500 kHz, ±100 kHz, 0
-Duration	10 seconds
-SNR	20 dB
-Use Case: System calibration and frequency response testing.
+def generate_pink_noise(duration=30, sample_rate=10e6):
+    """Generate pink noise (1/f spectrum)"""
+    n = int(sample_rate * duration)
+    # Generate white noise
+    white = np.random.randn(n) + 1j * np.random.randn(n)
+    
+    # Apply pink filter
+    # Simplified: use FFT and 1/f scaling
+    fft_data = np.fft.fft(white)
+    freqs = np.fft.fftfreq(n, 1/sample_rate)
+    freqs[0] = 1  # Avoid division by zero
+    pink_filter = 1 / np.sqrt(np.abs(freqs))
+    fft_pink = fft_data * pink_filter
+    pink = np.fft.ifft(fft_pink)
+    
+    # Normalize power
+    pink = pink / np.sqrt(np.mean(np.abs(pink)**2)) * 0.1
+    return pink.astype(np.complex64)
 
-Loading IQ Data
-Python Example
+def generate_impulsive_noise(duration=30, sample_rate=10e6, impulse_rate=0.01):
+    """Generate impulsive noise with random bursts"""
+    n = int(sample_rate * duration)
+    noise = np.zeros(n, dtype=np.complex128)
+    
+    num_impulses = int(n * impulse_rate)
+    impulse_indices = np.random.choice(n, num_impulses, replace=False)
+    
+    for idx in impulse_indices:
+        amplitude = np.random.exponential(5)
+        duration_samples = np.random.randint(1, 10)
+        end = min(idx + duration_samples, n)
+        noise[idx:end] += amplitude * np.exp(1j * 2 * np.pi * np.random.rand())
+    
+    return noise.astype(np.complex64)
+
+# Generate all noise variants
+output_dir = Path("data/iq/synthetic/noise")
+output_dir.mkdir(parents=True, exist_ok=True)
+
+signals = {
+    "white_gaussian": generate_white_gaussian_noise(30),
+    "pink_noise": generate_pink_noise(30),
+    "impulsive_noise": generate_impulsive_noise(30)
+}
+
+for name, signal in signals.items():
+    # Save IQ data
+    output_file = output_dir / f"{name}.iq"
+    signal.tofile(output_file)
+    
+    # Save metadata
+    metadata = {
+        "signal_type": name.replace('_', ' ').title(),
+        "sample_rate": 10e6,
+        "duration": 30,
+        "num_samples": len(signal),
+        "generation_date": datetime.now().isoformat()
+    }
+    
+    with open(output_dir / f"{name}.json", 'w') as f:
+        json.dump(metadata, f, indent=2)
+    
+    print(f"Generated {name}: {len(signal)} samples")
+OFDM Signal Generation
+python
+#!/usr/bin/env python3
+"""
+Generate synthetic OFDM signals
+"""
+
+import numpy as np
+
+class OFDMGenerator:
+    """OFDM signal generator"""
+    
+    def __init__(self, fft_size=64, cp_len=16, modulation='QPSK'):
+        self.fft_size = fft_size
+        self.cp_len = cp_len
+        self.modulation = modulation
+        self.symbol_len = fft_size + cp_len
+        
+        # Subcarrier mapping
+        self.data_subcarriers = self._get_data_subcarriers()
+        self.pilot_subcarriers = [11, 25, 39, 53]  # Standard 802.11 pilots
+        self.null_subcarriers = [0, 32]  # DC and guard bands
+    
+    def _get_data_subcarriers(self):
+        """Get data subcarrier indices"""
+        all_sc = list(range(-self.fft_size//2, self.fft_size//2))
+        data_sc = [sc for sc in all_sc 
+                  if sc not in self.pilot_subcarriers 
+                  and sc not in self.null_subcarriers]
+        return data_sc
+    
+    def _modulate_qpsk(self, bits):
+        """QPSK modulation"""
+        bits = bits.reshape(-1, 2)
+        symbols = np.zeros(len(bits), dtype=np.complex128)
+        for i, (b0, b1) in enumerate(bits):
+            if b0 == 0 and b1 == 0:
+                symbols[i] = (1 + 1j) / np.sqrt(2)
+            elif b0 == 0 and b1 == 1:
+                symbols[i] = (1 - 1j) / np.sqrt(2)
+            elif b0 == 1 and b1 == 0:
+                symbols[i] = (-1 + 1j) / np.sqrt(2)
+            else:
+                symbols[i] = (-1 - 1j) / np.sqrt(2)
+        return symbols
+    
+    def generate_ofdm_symbol(self):
+        """Generate single OFDM symbol"""
+        # Generate random bits for data subcarriers
+        num_data_bits = len(self.data_subcarriers) * 2  # 2 bits per symbol for QPSK
+        data_bits = np.random.randint(0, 2, num_data_bits)
+        data_symbols = self._modulate_qpsk(data_bits)
+        
+        # Generate pilot symbols (BPSK)
+        pilot_symbols = [1, -1, 1, -1]
+        
+        # Create frequency domain signal
+        freq_domain = np.zeros(self.fft_size, dtype=np.complex128)
+        freq_domain[self.fft_size//2:] = data_symbols[:len(self.data_subcarriers)//2]
+        freq_domain[:self.fft_size//2] = data_symbols[len(self.data_subcarriers)//2:]
+        
+        for i, sc in enumerate(self.pilot_subcarriers):
+            idx = self.fft_size//2 + sc
+            freq_domain[idx] = pilot_symbols[i]
+        
+        # Null subcarriers
+        for sc in self.null_subcarriers:
+            idx = self.fft_size//2 + sc
+            freq_domain[idx] = 0
+        
+        # IFFT
+        time_domain = np.fft.ifft(freq_domain)
+        
+        # Add cyclic prefix
+        cp = time_domain[-self.cp_len:]
+        return np.concatenate([cp, time_domain])
+    
+    def generate_signal(self, num_symbols=1000):
+        """Generate complete OFDM signal"""
+        signal = []
+        for _ in range(num_symbols):
+            symbol = self.generate_ofdm_symbol()
+            signal.append(symbol)
+        
+        return np.concatenate(signal).astype(np.complex64)
+
+# Generate OFDM variants
+generator_20mhz = OFDMGenerator(fft_size=64, cp_len=16)
+generator_40mhz = OFDMGenerator(fft_size=128, cp_len=32)
+generator_80mhz = OFDMGenerator(fft_size=256, cp_len=64)
+
+signals = {
+    "ofdm_20mhz": generator_20mhz.generate_signal(5000),
+    "ofdm_40mhz": generator_40mhz.generate_signal(5000),
+    "ofdm_80mhz": generator_80mhz.generate_signal(5000)
+}
+
+for name, signal in signals.items():
+    output_file = Path(f"data/iq/synthetic/ofdm/{name}.iq")
+    signal.tofile(output_file)
+Usage Examples
+Loading Synthetic Data
 python
 import numpy as np
 import json
+from pathlib import Path
 
-def load_iq_data(filepath):
-    """Load IQ data and metadata from file"""
-    filepath = Path(filepath)
-    
-    # Load metadata
-    with open(filepath.with_suffix('.json'), 'r') as f:
-        metadata = json.load(f)
+def load_synthetic_data(signal_type, category):
+    """Load synthetic IQ data"""
+    file_path = Path(f"data/iq/synthetic/{category}/{signal_type}.iq")
+    meta_path = file_path.with_suffix('.json')
     
     # Load IQ data
-    iq_data = np.fromfile(filepath, dtype=np.complex64)
+    iq_data = np.fromfile(file_path, dtype=np.complex64)
+    
+    # Load metadata
+    with open(meta_path, 'r') as f:
+        metadata = json.load(f)
     
     return iq_data, metadata
 
-# Example usage
-iq_data, meta = load_iq_data('data/iq/mock/dji_mavic_2.4g.iq')
-
-print(f"Signal: {meta['signal_type']}")
-print(f"Samples: {len(iq_data):,}")
-print(f"Duration: {len(iq_data) / meta['sample_rate']:.2f}s")
-print(f"Sample Rate: {meta['sample_rate']/1e6:.1f} MHz")
-
-# Process the IQ data
-# ... your detection logic here ...
-MATLAB/Octave Example
-matlab
-% Load IQ data
-filename = 'data/iq/mock/dji_mavic_2.4g.iq';
-fid = fopen(filename, 'rb');
-iq_data = fread(fid, Inf, 'single');
-fclose(fid);
-
-% Reshape to complex (interleaved I/Q)
-iq_data = iq_data(1:2:end) + 1j * iq_data(2:2:end);
-
-% Load metadata
-fid = fopen(strrep(filename, '.iq', '.json'), 'r');
-metadata = jsondecode(fread(fid, '*char')');
-fclose(fid);
-
-fprintf('Signal: %s\n', metadata.signal_type);
-fprintf('Samples: %d\n', length(iq_data));
-fprintf('Duration: %.2f s\n', length(iq_data) / metadata.sample_rate);
-GNU Radio Example
+# Examples
+white_noise, meta = load_synthetic_data("white_gaussian", "noise")
+ofdm_signal, meta = load_synthetic_data("ofdm_20mhz", "ofdm")
+lora_signal, meta = load_synthetic_data("lora_sf7", "lora")
+Parameter Sweep Testing
 python
-# In GNU Radio Companion, use the File Source block:
-# File: data/iq/mock/dji_mavic_2.4g.iq
-# Type: complex
-# Repeat: No
-Visualization Examples
-Plot Spectrum
+def test_snr_sweep():
+    """Test detection performance across SNR range"""
+    
+    # Load clean signal
+    signal, meta = load_synthetic_data("ofdm_20mhz", "ofdm")
+    
+    snr_values = [-10, -5, 0, 5, 10, 15, 20, 25, 30]
+    results = {}
+    
+    for snr_db in snr_values:
+        # Add noise
+        signal_power = np.mean(np.abs(signal)**2)
+        noise_power = signal_power / (10 ** (snr_db / 10))
+        noise = np.sqrt(noise_power/2) * (np.random.randn(len(signal)) + 1j * np.random.randn(len(signal)))
+        noisy = signal + noise
+        
+        # Process
+        detections = detection_pipeline.process(noisy, meta['sample_rate'])
+        results[snr_db] = len(detections) > 0
+    
+    return results
+Modulation Recognition Testing
 python
-import matplotlib.pyplot as plt
-from scipy import signal
-
-def plot_spectrum(iq_data, sample_rate, title="Spectrum"):
-    """Plot power spectral density"""
-    f, psd = signal.welch(iq_data, fs=sample_rate, nperseg=4096)
+def test_modulation_recognition():
+    """Test modulation classification accuracy"""
+    
+    modulations = {
+        "ofdm_20mhz": "OFDM",
+        "lora_sf7": "LoRa",
+        "fm_analog": "FM"
+    }
+    
+    results = {}
+    
+    for signal_name, expected_mod in modulations.items():
+        signal, meta = load_synthetic_data(signal_name, 
+                                          "ofdm" if "ofdm" in signal_name else 
+                                          "lora" if "lora" in signal_name else 
+                                          "fm")
+        
+        # Classify modulation
+        detected_mod = modulation_classifier.classify(signal, meta['sample_rate'])
+        
+        results[signal_name] = {
+            "expected": expected_mod,
+            "detected": detected_mod,
+            "correct": expected_mod == detected_mod
+        }
+    
+    return results
+Quality Metrics
+Signal-to-Noise Ratio (SNR)
+python
+def calculate_snr(signal, noise_floor_db=-100):
+    """Calculate SNR of synthetic signal"""
+    signal_power = np.mean(np.abs(signal)**2)
+    noise_power = 10 ** (noise_floor_db / 10)
+    snr_db = 10 * np.log10(signal_power / noise_power)
+    return snr_db
+Peak-to-Average Power Ratio (PAPR)
+python
+def calculate_papr(signal):
+    """Calculate PAPR in dB"""
+    peak_power = np.max(np.abs(signal)**2)
+    avg_power = np.mean(np.abs(signal)**2)
+    papr_db = 10 * np.log10(peak_power / avg_power)
+    return papr_db
+Error Vector Magnitude (EVM)
+python
+def calculate_evm(signal, reference):
+    """Calculate EVM percentage"""
+    error = signal - reference
+    evm_rms = np.sqrt(np.mean(np.abs(error)**2) / np.mean(np.abs(reference)**2))
+    return evm_rms * 100
+Validation Tools
+Spectrum Validation
+python
+def validate_spectrum(signal, sample_rate, expected_bandwidth):
+    """Validate signal spectrum characteristics"""
+    from scipy import signal
+    
+    f, psd = signal.welch(signal, fs=sample_rate, nperseg=4096)
     psd_db = 10 * np.log10(psd + 1e-12)
     
-    plt.figure(figsize=(12, 6))
-    plt.plot(f / 1e6, psd_db)
-    plt.xlabel('Frequency (MHz)')
-    plt.ylabel('PSD (dBm/Hz)')
-    plt.title(title)
-    plt.grid(True, alpha=0.3)
-    plt.xlim([-10, 10])  # Show ±10 MHz around center
-    plt.show()
-
-# Usage
-iq_data, meta = load_iq_data('data/iq/mock/dji_mavic_2.4g.iq')
-plot_spectrum(iq_data, meta['sample_rate'], meta['signal_type'])
-Plot Constellation
+    # Find occupied bandwidth
+    threshold = np.max(psd_db) - 20  # 20 dB below peak
+    occupied = np.where(psd_db > threshold)[0]
+    occupied_bw = (f[occupied[-1]] - f[occupied[0]]) / 1e6
+    
+    is_valid = abs(occupied_bw - expected_bandwidth) < expected_bandwidth * 0.1
+    
+    return {
+        "valid": is_valid,
+        "measured_bw_mhz": occupied_bw,
+        "expected_bw_mhz": expected_bandwidth,
+        "error_pct": abs(occupied_bw - expected_bandwidth) / expected_bandwidth * 100
+    }
+Statistical Validation
 python
-def plot_constellation(iq_data, num_points=1000):
-    """Plot IQ constellation diagram"""
-    plt.figure(figsize=(8, 8))
-    plt.scatter(np.real(iq_data[:num_points]), 
-                np.imag(iq_data[:num_points]), 
-                s=1, alpha=0.5)
-    plt.xlabel('In-phase')
-    plt.ylabel('Quadrature')
-    plt.title('Constellation Diagram')
-    plt.grid(True, alpha=0.3)
-    plt.axis('equal')
-    plt.show()
-Performance Characteristics
-File Sizes
-Duration	Samples	File Size (complex64)
-1 second	10e6	80 MB
-10 seconds	100e6	800 MB
-30 seconds	300e6	2.4 GB
-60 seconds	600e6	4.8 GB
-Processing Time Estimates
-Operation	Duration (30 sec file)
-File Load	~2-5 seconds
-FFT (2048 pts)	~0.5 seconds
-PSD Computation	~1 second
-Peak Detection	~0.2 seconds
-ML Classification	~0.1 seconds
-Regenerating Mock Data
-All mock data files can be regenerated using the provided generation scripts:
-
+def validate_statistics(signal):
+    """Validate signal statistics"""
+    from scipy import stats
+    
+    real = np.real(signal)
+    imag = np.imag(signal)
+    
+    # Test for Gaussianity (if applicable)
+    _, p_value = stats.normaltest(real[:10000])
+    
+    # Calculate moments
+    skewness = stats.skew(real)
+    kurtosis = stats.kurtosis(real)
+    
+    return {
+        "is_gaussian": p_value > 0.05,
+        "skewness": skewness,
+        "kurtosis": kurtosis,
+        "mean": np.mean(real),
+        "std": np.std(real)
+    }
+Performance Benchmarks
+Generation Speed
+Signal Type	Duration	Generation Time	Memory Usage
+White Noise	30s	0.5s	240 MB
+Pink Noise	30s	2.0s	240 MB
+OFDM (20MHz)	30s	1.5s	240 MB
+OFDM (80MHz)	30s	3.0s	480 MB
+LoRa SF7	30s	1.0s	240 MB
+FM Analog	30s	0.8s	240 MB
+Command Line Interface
 bash
-# Regenerate DJI Mavic signals
-python generation_scripts/generate_dji_mavic.py --duration 30
+# Generate all synthetic data
+python scripts/generate_synthetic_data.py --all
 
-# Regenerate FPV Analog signal
-python generation_scripts/generate_fpv_analog.py --duration 30
+# Generate specific signal type
+python scripts/generate_synthetic_data.py --type ofdm --bandwidth 20
 
-# Regenerate noise floor
-python generation_scripts/generate_noise_floor.py --duration 30
+# Generate with custom parameters
+python scripts/generate_synthetic_data.py --type noise --duration 60 --snr 20
 
-# Regenerate WiFi interference
-python generation_scripts/generate_wifi_interference.py --duration 30
-Custom Generation Parameters
-bash
-# Generate custom DJI signal
-python generation_scripts/generate_dji_mavic.py \
-    --duration 60 \
-    --snr 20 \
-    --frequency 2.44e9 \
-    --sample-rate 20e6
+# Validate synthetic data
+python scripts/generate_synthetic_data.py --validate
 
-# Generate custom noise floor
-python generation_scripts/generate_noise_floor.py \
-    --duration 60 \
-    --environment industrial \
-    --noise-floor -80
-
-# Generate multi-channel WiFi
-python generation_scripts/generate_wifi_interference.py \
-    --multi-channel \
-    --duration 10
-Testing Scenarios
-Scenario 1: Basic Detection
+# Run benchmarks
+python scripts/generate_synthetic_data.py --benchmark
+Adding New Synthetic Signals
+Signal Template
 python
-# Test detection on DJI Mavic signal
-iq_data, meta = load_iq_data('data/iq/mock/dji_mavic_2.4g.iq')
-detections = detector.process(iq_data, meta['sample_rate'])
-assert len(detections) > 0
-assert detections[0]['drone_type'] == 'DJI Mavic'
-Scenario 2: Interference Rejection
-python
-# Mix drone signal with interference
-drone, drone_meta = load_iq_data('data/iq/mock/dji_mavic_2.4g.iq')
-wifi, wifi_meta = load_iq_data('data/iq/mock/interference_wifi.iq')
-
-# Mix signals
-mixed = drone + 0.5 * wifi[:len(drone)]
-
-# Test detection still works
-detections = detector.process(mixed, drone_meta['sample_rate'])
-Scenario 3: Low SNR Performance
-python
-import numpy as np
-
-# Load clean signal
-iq_data, meta = load_iq_data('data/iq/mock/dji_mavic_2.4g.iq')
-
-# Add noise to reduce SNR
-noise_power = 10 ** (meta['statistics']['mean_power_dbm'] / 10) / (10 ** (5 / 10))
-noise = np.sqrt(noise_power/2) * (np.random.randn(len(iq_data)) + 1j * np.random.randn(len(iq_data)))
-noisy_signal = iq_data + noise
-
-# Test detection at 5 dB SNR
-detections = detector.process(noisy_signal, meta['sample_rate'])
+class CustomSignalGenerator:
+    """Template for new synthetic signals"""
+    
+    def __init__(self, sample_rate=10e6, duration=30):
+        self.sample_rate = sample_rate
+        self.duration = duration
+        self.num_samples = int(sample_rate * duration)
+    
+    def generate(self):
+        """Generate the signal"""
+        t = np.arange(self.num_samples) / self.sample_rate
+        # Implement signal generation here
+        signal = np.zeros(self.num_samples, dtype=np.complex128)
+        return signal.astype(np.complex64)
+    
+    def save(self, output_path):
+        """Save generated signal"""
+        signal = self.generate()
+        signal.tofile(output_path)
+        
+        # Save metadata
+        metadata = {
+            "signal_type": self.__class__.__name__,
+            "sample_rate": self.sample_rate,
+            "duration": self.duration,
+            "num_samples": self.num_samples,
+            "generation_date": datetime.now().isoformat()
+        }
+        
+        with open(output_path.with_suffix('.json'), 'w') as f:
+            json.dump(metadata, f, indent=2)
 Troubleshooting
-Common Issues
 Issue	Solution
-File not found	Verify file path and generation
-Memory error	Use chunked processing for large files
-Wrong sample rate	Check metadata for correct sample rate
-No detections	Verify signal is within frequency range
-File Integrity Check
-python
-def verify_iq_file(filepath):
-    """Verify IQ file integrity"""
-    # Check file exists
-    if not Path(filepath).exists():
-        return False, "File not found"
-    
-    # Check metadata exists
-    if not Path(filepath).with_suffix('.json').exists():
-        return False, "Metadata not found"
-    
-    # Check file size
-    file_size = Path(filepath).stat().st_size
-    if file_size % 8 != 0:
-        return False, f"Invalid file size: {file_size} bytes"
-    
-    # Check data integrity
-    try:
-        data = np.fromfile(filepath, dtype=np.complex64)
-        if len(data) == 0:
-            return False, "Empty file"
-        if np.any(np.isnan(data)):
-            return False, "NaN values detected"
-        if np.any(np.isinf(data)):
-            return False, "Infinite values detected"
-    except Exception as e:
-        return False, str(e)
-    
-    return True, "OK"
-License
-All mock data files and generation scripts are part of the Drone Detection System and are subject to the same license terms.
-
-Version History
-Version	Date	Changes
-2.0.0	2024-01-15	Added 5.8 GHz variants, multi-environment noise
-1.0.0	2023-12-01	Initial release with basic mock data
+Signal clipping	Reduce amplitude or normalize
+Unexpected spectrum	Verify generation parameters
+Memory errors	Reduce duration or use chunking
+Slow generation	Optimize FFT operations
