@@ -1,1332 +1,1569 @@
-# Signal Processing Chain Documentation
+# Drone Detector API Reference
 
 ## Overview
 
-The Drone Detector's signal processing chain transforms raw IQ samples from Software Defined Radios (SDRs) into actionable drone detection events. This document details each stage of the pipeline, from antenna through to final classification.
+The Drone Detector provides a comprehensive REST API for system control, data retrieval, and real-time monitoring. The API follows RESTful principles, uses JSON for requests/responses, and includes OpenAPI 3.0 documentation.
 
-## Signal Processing Pipeline
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│ Complete Signal Processing Chain │
-│ │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
-│ │ Antenna │─▶│ LNA │─▶│ Mixer │─▶│ ADC │─▶│ DDC │─▶│ IQ │ │
-│ │ │ │ │ │ │ │ │ │ │ │ Stream │ │
-│ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └───┬────┘ │
-│ (Hardware) │ │
-│ ▼ │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
-│ │ Detection│◀─│ ML │◀─│ Feature │◀─│ PSD │◀─│ FFT │◀─│ IQ │ │
-│ │ Event │ │Classify │ │ Extract │ │ Compute │ │ Compute │ │ Buffer │ │
-│ └────┬─────┘ └──────────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────────┘ │
-│ │ │ │ │ │
-│ ▼ ▼ ▼ ▼ │
-│ ┌──────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ │
-│ │ Alert │ │ Signature │ │ Peak Map │ │ Spectrum │ │
-│ │ Dispatch │ │ Matching │ │ (Waterfall)│ │ Display │ │
-│ └──────────┘ └──────────────┘ └──────────────┘ └──────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+**Base URL:** `http://localhost:8888/api/v1`
+
+**API Documentation:** `http://localhost:8888/docs` (Swagger UI) or `http://localhost:8888/redoc` (ReDoc)
+
+## Authentication
+
+The API uses JWT (JSON Web Token) authentication for protected endpoints.
+
+### Authentication Flow
+
+```bash
+# 1. Obtain access token
+curl -X POST http://localhost:8888/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "your_password"}'
+
+# Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "expires_in": 3600
+}
+
+# 2. Use token in subsequent requests
+curl -X GET http://localhost:8888/api/v1/detections \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+API Keys
+For machine-to-machine communication, API keys are supported:
+
+bash
+curl -X GET http://localhost:8888/api/v1/detections \
+  -H "X-API-Key: your_api_key_here"
+Response Format
+All responses follow a consistent format:
+
+Success Response
+json
+{
+  "status": "success",
+  "data": {
+    // Response data here
+  },
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00Z",
+    "request_id": "uuid",
+    "version": "1.0.0"
+  }
+}
+Paginated Response
+json
+{
+  "status": "success",
+  "data": {
+    "items": [],
+    "pagination": {
+      "page": 1,
+      "per_page": 50,
+      "total": 1234,
+      "pages": 25,
+      "next": "/api/v1/detections?page=2",
+      "prev": null
+    }
+  }
+}
+Error Response
+json
+{
+  "status": "error",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request parameters",
+    "details": [
+      {
+        "field": "frequency",
+        "message": "Frequency must be between 70e6 and 6e9"
+      }
+    ]
+  },
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00Z",
+    "request_id": "uuid"
+  }
+}
+HTTP Status Codes
+Status	Description
+200	Success
+201	Created
+204	No Content
+400	Bad Request - Invalid parameters
+401	Unauthorized - Authentication required
+403	Forbidden - Insufficient permissions
+404	Not Found - Resource doesn't exist
+409	Conflict - Resource already exists
+422	Unprocessable Entity - Validation error
+429	Too Many Requests - Rate limit exceeded
+500	Internal Server Error
+503	Service Unavailable
+Rate Limiting
+API endpoints have rate limits to ensure system stability:
 
 text
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640995200
+Retry-After: 3600
+Endpoint Type	Limit	Period
+Public endpoints	100	per minute
+Authenticated endpoints	1000	per minute
+Admin endpoints	5000	per minute
+Data export	50	per hour
+Endpoints
+System Management
+GET /health
+System health check endpoint.
 
-## Stage 1: RF Front-End (Hardware)
+Response:
 
-### Antenna System
+json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "components": {
+    "database": "healthy",
+    "redis": "healthy",
+    "hardware": "healthy",
+    "websocket": "healthy"
+  },
+  "uptime_seconds": 86400
+}
+GET /metrics
+Prometheus metrics endpoint.
 
-```yaml
-Antenna Specifications:
-  Frequency Range: 70 MHz - 6 GHz
-  Gain: 5-15 dBi (depending on band)
-  Polarization: Vertical (omnidirectional) or Circular (directional)
-  Impedance: 50Ω
-  VSWR: < 2:1
+Response: Prometheus exposition format
 
-Recommended Antennas:
-  - Omnidirectional: Discone (100 MHz - 3 GHz)
-  - Directional: Log-periodic (400 MHz - 6 GHz)
-  - Wideband: Biconical (70 MHz - 6 GHz)
-Low Noise Amplifier (LNA)
-yaml
-LNA Characteristics:
-  Gain: 20-30 dB
-  Noise Figure: < 1 dB
-  P1dB: > 10 dBm
-  OIP3: > 30 dBm
-  Current Consumption: < 100 mA @ 5V
-SDR Hardware Chain
-python
-class SDRHardwareChain:
-    """
-    Hardware signal chain configuration
-    """
-    
-    def __init__(self):
-        self.stages = [
-            {
-                "name": "Antenna",
-                "gain": 10,  # dBi
-                "noise_figure": 0.5  # dB
-            },
-            {
-                "name": "LNA",
-                "gain": 25,  # dB
-                "noise_figure": 0.8,  # dB
-                "p1db": 5  # dBm
-            },
-            {
-                "name": "Bandpass Filter",
-                "insertion_loss": 1,  # dB
-                "bandwidth": "2.4-2.5 GHz"
-            },
-            {
-                "name": "Mixer",
-                "conversion_loss": 7,  # dB
-                "ip3": 15  # dBm
-            },
-            {
-                "name": "ADC",
-                "resolution": 12,  # bits
-                "sample_rate": 20e6,  # Hz
-                "sfdr": 70  # dBc
-            }
-        ]
-    
-    def calculate_total_gain(self) -> float:
-        """Calculate total system gain"""
-        total_gain = 0
-        for stage in self.stages:
-            if "gain" in stage:
-                total_gain += stage["gain"]
-            elif "insertion_loss" in stage:
-                total_gain -= stage["insertion_loss"]
-            elif "conversion_loss" in stage:
-                total_gain -= stage["conversion_loss"]
-        return total_gain
-    
-    def calculate_noise_figure(self) -> float:
-        """Calculate cascaded noise figure using Friis formula"""
-        noise_factors = []
-        gains_linear = []
-        
-        for stage in self.stages:
-            nf = stage.get("noise_figure", stage.get("insertion_loss", 3))
-            gain = stage.get("gain", -stage.get("insertion_loss", 0))
-            
-            noise_factors.append(10 ** (nf / 10))
-            gains_linear.append(10 ** (gain / 10))
-        
-        # Friis formula
-        total_nf = noise_factors[0]
-        cumulative_gain = gains_linear[0]
-        
-        for i in range(1, len(noise_factors)):
-            total_nf += (noise_factors[i] - 1) / cumulative_gain
-            cumulative_gain *= gains_linear[i]
-        
-        return 10 * math.log10(total_nf)
-Stage 2: IQ Data Acquisition
-Sampling Parameters
-python
-class IQAcquisitionConfig:
-    """Configuration for IQ sample acquisition"""
-    
-    SAMPLE_RATES = {
-        "narrow": 2e6,    # 2 MHz - for focused scanning
-        "medium": 10e6,   # 10 MHz - standard operation
-        "wide": 20e6,     # 20 MHz - wideband scanning
-        "ultra": 56e6     # 56 MHz - max for high-end SDRs
+text
+# HELP drone_detections_total Total number of drone detections
+# TYPE drone_detections_total counter
+drone_detections_total{drone_type="DJI_Mavic"} 1234
+
+# HELP drone_detection_latency_ms Detection processing latency
+# TYPE drone_detection_latency_ms histogram
+drone_detection_latency_ms_bucket{le="50"} 100
+drone_detection_latency_ms_bucket{le="100"} 500
+GET /system/info
+Get system information.
+
+Response:
+
+json
+{
+  "version": "1.0.0",
+  "build_date": "2024-01-01T00:00:00Z",
+  "git_commit": "abc123",
+  "environment": "production",
+  "hardware": {
+    "type": "hackrf",
+    "sample_rate": 2000000,
+    "center_frequency": 2450000000,
+    "gain": 20
+  },
+  "resources": {
+    "cpu_percent": 45.2,
+    "memory_mb": 512,
+    "disk_usage_percent": 30.5
+  }
+}
+Authentication
+POST /auth/login
+Authenticate user and get access token.
+
+Request:
+
+json
+{
+  "username": "admin",
+  "password": "your_password"
+}
+Response:
+
+json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "user": {
+    "id": "uuid",
+    "username": "admin",
+    "role": "admin",
+    "permissions": ["read", "write", "admin"]
+  }
+}
+POST /auth/refresh
+Refresh access token.
+
+Request:
+
+json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
+}
+Response:
+
+json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "expires_in": 3600
+}
+POST /auth/logout
+Logout user (invalidates token).
+
+Request Headers:
+
+text
+Authorization: Bearer <token>
+Response: 204 No Content
+
+POST /auth/change-password
+Change user password.
+
+Request:
+
+json
+{
+  "current_password": "old_password",
+  "new_password": "new_password"
+}
+Response: 204 No Content
+
+POST /auth/api-key
+Generate new API key.
+
+Response:
+
+json
+{
+  "api_key": "dk_live_abc123def456...",
+  "name": "My Integration",
+  "created_at": "2024-01-01T00:00:00Z",
+  "expires_at": "2025-01-01T00:00:00Z"
+}
+DELETE /auth/api-key/{key_id}
+Revoke API key.
+
+Response: 204 No Content
+
+Detections
+GET /detections
+Get list of drone detections.
+
+Query Parameters:
+
+Parameter	Type	Description
+start_time	datetime	Start of time range (ISO 8601)
+end_time	datetime	End of time range (ISO 8601)
+drone_type	string	Filter by drone type
+threat_level	string	Filter by threat level (low, medium, high, critical)
+min_confidence	float	Minimum confidence score (0-1)
+frequency_min	float	Minimum frequency (Hz)
+frequency_max	float	Maximum frequency (Hz)
+limit	int	Number of results (default: 50, max: 1000)
+offset	int	Pagination offset
+sort	string	Sort field (timestamp, confidence)
+order	string	Sort order (asc, desc)
+Response:
+
+json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "timestamp": "2024-01-01T00:00:00Z",
+      "drone_type": "DJI Mavic 3",
+      "frequency": 2445000000,
+      "confidence": 0.95,
+      "threat_level": "medium",
+      "signal_power": -45.5,
+      "snr": 28.3,
+      "position": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "altitude": 100.5,
+        "accuracy": 10.0
+      },
+      "remote_id": {
+        "serial_number": "DJI_123456",
+        "operator_id": "OP_789012",
+        "uas_id": "UAS_345678"
+      }
     }
-    
-    GAIN_SETTINGS = {
-        "minimum": 0,      # dB
-        "low": 10,         # dB
-        "medium": 20,      # dB
-        "high": 30,        # dB
-        "maximum": 40      # dB (if hardware supports)
-    }
-    
-    CENTER_FREQUENCIES = {
-        "2.4GHz": 2.45e9,
-        "5.8GHz": 5.8e9,
-        "900MHz": 915e6,
-        "1.2GHz": 1.25e9,
-        "custom": None
-    }
-    
-    def __init__(self):
-        self.sample_rate = self.SAMPLE_RATES["medium"]
-        self.center_frequency = self.CENTER_FREQUENCIES["2.4GHz"]
-        self.gain = self.GAIN_SETTINGS["medium"]
-        self.samples_per_buffer = 131072  # 2^17
-        self.buffer_count = 4
-        self.format = "complex_float32"  # or "complex_int16"
-IQ Data Structure
-python
-import numpy as np
-from dataclasses import dataclass
-from datetime import datetime
+  ],
+  "pagination": {
+    "total": 1234,
+    "limit": 50,
+    "offset": 0,
+    "next_offset": 50
+  }
+}
+GET /detections/{detection_id}
+Get specific detection by ID.
 
-@dataclass
-class IQData:
-    """
-    IQ sample container
-    """
-    samples: np.ndarray  # complex64 array
-    sample_rate: float    # Hz
-    center_frequency: float  # Hz
-    timestamp: datetime
-    gain: float  # dB
-    metadata: dict
-    
-    @property
-    def duration(self) -> float:
-        """Calculate signal duration in seconds"""
-        return len(self.samples) / self.sample_rate
-    
-    @property
-    def bandwidth(self) -> float:
-        """Calculate effective bandwidth (sampling rate)"""
-        return self.sample_rate
-    
-    @property
-    def nyquist_frequency(self) -> float:
-        """Calculate Nyquist frequency"""
-        return self.sample_rate / 2
-    
-    def get_power(self) -> float:
-        """Calculate average power in dBm"""
-        power_watts = np.mean(np.abs(self.samples) ** 2)
-        power_dbm = 10 * np.log10(power_watts * 1000)
-        return power_dbm
-Stage 3: IQ Preprocessing
-DC Offset Removal
+Response:
+
+json
+{
+  "id": "uuid",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "drone_type": "DJI Mavic 3",
+  "frequency": 2445000000,
+  "confidence": 0.95,
+  "threat_level": "medium",
+  "signal_power": -45.5,
+  "snr": 28.3,
+  "bandwidth": 20000000,
+  "modulation": "OFDM",
+  "position": {
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "altitude": 100.5,
+    "accuracy": 10.0
+  },
+  "position_history": [
+    {
+      "timestamp": "2024-01-01T00:00:00Z",
+      "latitude": 37.7749,
+      "longitude": -122.4194,
+      "altitude": 100.5
+    }
+  ],
+  "remote_id": {
+    "serial_number": "DJI_123456",
+    "operator_id": "OP_789012",
+    "uas_id": "UAS_345678",
+    "operator_location": {
+      "latitude": 37.7750,
+      "longitude": -122.4195
+    }
+  },
+  "spectrum_snapshot": {
+    "frequencies": [2440000000, 2441000000, ...],
+    "psd": [-90, -85, -45, -88, ...],
+    "waterfall": [[...], [...]]
+  }
+}
+GET /detections/stats
+Get detection statistics.
+
+Query Parameters:
+
+Parameter	Type	Description
+start_time	datetime	Start of time range
+end_time	datetime	End of time range
+interval	string	Time bucket interval (hour, day, week, month)
+Response:
+
+json
+{
+  "total_detections": 1234,
+  "unique_drones": 42,
+  "threat_distribution": {
+    "critical": 5,
+    "high": 23,
+    "medium": 456,
+    "low": 750
+  },
+  "drone_types": {
+    "DJI Mavic 3": 234,
+    "DJI Mini": 456,
+    "FPV Analog": 321,
+    "Custom": 123
+  },
+  "frequency_bands": {
+    "2.4GHz": 678,
+    "5.8GHz": 456,
+    "900MHz": 100
+  },
+  "detections_over_time": [
+    {
+      "timestamp": "2024-01-01T00:00:00Z",
+      "count": 42
+    }
+  ],
+  "avg_confidence": 0.87,
+  "peak_hour": 14
+}
+GET /detections/export
+Export detections to file.
+
+Query Parameters:
+
+Parameter	Type	Description
+start_time	datetime	Start of time range
+end_time	datetime	End of time range
+format	string	Export format (csv, json, parquet)
+include_raw	boolean	Include raw IQ data
+Response: File download (Content-Disposition attachment)
+
+Real-time Streaming (WebSocket)
+WebSocket /ws/detections
+Real-time detection stream.
+
+Connection:
+
+javascript
+const ws = new WebSocket('ws://localhost:8888/api/v1/ws/detections?token=your_jwt');
+
+ws.onmessage = (event) => {
+  const detection = JSON.parse(event.data);
+  console.log('New detection:', detection);
+};
+Message Types:
+
+Detection Event
+
+json
+{
+  "type": "detection",
+  "data": {
+    "detection_id": "uuid",
+    "drone_type": "DJI Mavic 3",
+    "confidence": 0.95,
+    "threat_level": "medium",
+    "timestamp": "2024-01-01T00:00:00Z"
+  }
+}
+Heartbeat
+
+json
+{
+  "type": "heartbeat",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+Alert
+
+json
+{
+  "type": "alert",
+  "severity": "high",
+  "message": "Unauthorized drone detected in restricted zone",
+  "detection_id": "uuid"
+}
+System Status
+
+json
+{
+  "type": "system_status",
+  "status": "operational",
+  "hardware_temp": 45.2,
+  "cpu_usage": 32.5
+}
+Spectrum Analysis
+GET /spectrum/live
+Get real-time spectrum data.
+
+Response:
+
+json
+{
+  "timestamp": "2024-01-01T00:00:00Z",
+  "center_frequency": 2450000000,
+  "sample_rate": 2000000,
+  "frequencies": [2440000000, 2441000000, ...],
+  "spectrum": [-90.5, -85.2, -45.3, -88.1, ...],
+  "waterfall": [
+    [-90, -85, -45, -88],
+    [-91, -86, -46, -89],
+    ...
+  ],
+  "peaks": [
+    {
+      "frequency": 2445000000,
+      "power": -45.3,
+      "bandwidth": 20000000
+    }
+  ]
+}
+GET /spectrum/history
+Get historical spectrum data.
+
+Query Parameters:
+
+Parameter	Type	Description
+start_time	datetime	Start of time range
+end_time	datetime	End of time range
+frequency	float	Specific frequency
+bandwidth	float	Frequency bandwidth
+resolution	int	FFT resolution
+Response:
+
+json
+{
+  "frequency": 2445000000,
+  "bandwidth": 20000000,
+  "time_series": [
+    {
+      "timestamp": "2024-01-01T00:00:00Z",
+      "power": -45.3,
+      "snr": 28.5
+    }
+  ],
+  "stats": {
+    "min_power": -90.2,
+    "max_power": -45.3,
+    "avg_power": -65.4,
+    "std_power": 12.3
+  }
+}
+GET /spectrum/waterfall/{date}
+Get waterfall image for specific date.
+
+Response: PNG image
+
+Hardware Control
+GET /hardware/status
+Get hardware status.
+
+Response:
+
+json
+{
+  "type": "hackrf",
+  "connected": true,
+  "temperature_c": 45.2,
+  "sample_rate": 2000000,
+  "center_frequency": 2450000000,
+  "gain": 20,
+  "lna_gain": 16,
+  "vga_gain": 20,
+  "usb_speed": "High Speed",
+  "firmware_version": "2023.01.1"
+}
+POST /hardware/configure
+Configure hardware parameters.
+
+Request:
+
+json
+{
+  "sample_rate": 10000000,
+  "center_frequency": 5800000000,
+  "gain": 24,
+  "lna_gain": 20,
+  "vga_gain": 30,
+  "bandwidth": 20000000
+}
+Response:
+
+json
+{
+  "status": "configured",
+  "previous_config": {...},
+  "new_config": {...}
+}
+POST /hardware/scan
+Initiate frequency scan.
+
+Request:
+
+json
+{
+  "start_frequency": 2400000000,
+  "end_frequency": 2500000000,
+  "step_size": 1000000,
+  "dwell_time_ms": 100
+}
+Response:
+
+json
+{
+  "scan_id": "uuid",
+  "progress_url": "/api/v1/hardware/scan/{scan_id}/status",
+  "estimated_completion": "2024-01-01T00:01:00Z"
+}
+GET /hardware/scan/{scan_id}/status
+Get scan status.
+
+Response:
+
+json
+{
+  "scan_id": "uuid",
+  "status": "running",
+  "progress_percent": 45,
+  "current_frequency": 2445000000,
+  "detections_found": 3
+}
+GET /hardware/calibrate
+Run hardware calibration.
+
+Response:
+
+json
+{
+  "calibration_id": "uuid",
+  "status": "running",
+  "estimated_duration_seconds": 30
+}
+Drone Signatures
+GET /signatures
+Get drone signature database.
+
+Response:
+
+json
+{
+  "signatures": [
+    {
+      "drone_type": "DJI Mavic 3",
+      "frequency_bands": [
+        {"start": 2400000000, "end": 2480000000},
+        {"start": 5725000000, "end": 5875000000}
+      ],
+      "modulation": "OFDM",
+      "bandwidth": 20000000,
+      "signature_features": {
+        "peak_width": 1500000,
+        "cyclic_prefix": true,
+        "pilots": [2405000000, 2410000000]
+      },
+      "confidence_threshold": 0.75
+    }
+  ],
+  "last_updated": "2024-01-01T00:00:00Z",
+  "version": 42
+}
+POST /signatures
+Add new drone signature.
+
+Request:
+
+json
+{
+  "drone_type": "Custom Drone",
+  "frequency_bands": [
+    {"start": 2400000000, "end": 2480000000}
+  ],
+  "modulation": "OFDM",
+  "bandwidth": 20000000,
+  "signature_features": {
+    "peak_width": 1500000,
+    "cyclic_prefix": true
+  }
+}
+Response:
+
+json
+{
+  "id": "uuid",
+  "drone_type": "Custom Drone",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+PUT /signatures/{signature_id}
+Update existing signature.
+
+Response:
+
+json
+{
+  "id": "uuid",
+  "updated": true,
+  "version": 2
+}
+DELETE /signatures/{signature_id}
+Delete signature.
+
+Response: 204 No Content
+
+Alerts
+GET /alerts
+Get alerts.
+
+Query Parameters:
+
+Parameter	Type	Description
+severity	string	Filter by severity (low, medium, high, critical)
+acknowledged	boolean	Filter by acknowledgment status
+start_time	datetime	Start of time range
+end_time	datetime	End of time range
+limit	int	Number of results
+Response:
+
+json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "timestamp": "2024-01-01T00:00:00Z",
+      "severity": "high",
+      "title": "Unauthorized Drone Detected",
+      "message": "DJI Mavic 3 detected in restricted airspace",
+      "detection_id": "uuid",
+      "acknowledged": false,
+      "acknowledged_by": null,
+      "acknowledged_at": null,
+      "actions_taken": ["notification_sent", "recording_started"]
+    }
+  ],
+  "unacknowledged_count": 3
+}
+POST /alerts/{alert_id}/acknowledge
+Acknowledge alert.
+
+Request:
+
+json
+{
+  "notes": "Investigating the situation"
+}
+Response:
+
+json
+{
+  "id": "uuid",
+  "acknowledged": true,
+  "acknowledged_by": "admin",
+  "acknowledged_at": "2024-01-01T00:00:00Z"
+}
+POST /alerts/config
+Configure alert rules.
+
+Request:
+
+json
+{
+  "rules": [
+    {
+      "name": "High threat in restricted zone",
+      "condition": "threat_level == 'high' and in_restricted_zone",
+      "severity": "critical",
+      "actions": ["email", "sms", "webhook", "record_video"],
+      "cooldown_seconds": 300
+    }
+  ],
+  "notification_channels": {
+    "email": {
+      "enabled": true,
+      "recipients": ["security@example.com"]
+    },
+    "sms": {
+      "enabled": true,
+      "numbers": ["+1234567890"]
+    },
+    "webhook": {
+      "enabled": false,
+      "url": "https://your-webhook.com/alert"
+    }
+  }
+}
+Response:
+
+json
+{
+  "status": "configured",
+  "rules_active": 5,
+  "channels_active": 2
+}
+Map & Geospatial
+GET /map/detections
+Get detection locations for map.
+
+Query Parameters:
+
+Parameter	Type	Description
+bounds	string	Map bounds (min_lon,min_lat,max_lon,max_lat)
+start_time	datetime	Start of time range
+end_time	datetime	End of time range
+threat_level	string	Filter by threat level
+Response (GeoJSON):
+
+json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.4194, 37.7749]
+      },
+      "properties": {
+        "detection_id": "uuid",
+        "drone_type": "DJI Mavic 3",
+        "threat_level": "high",
+        "timestamp": "2024-01-01T00:00:00Z",
+        "confidence": 0.95
+      }
+    }
+  ]
+}
+GET /map/heatmap
+Get detection heatmap data.
+
+Response:
+
+json
+{
+  "type": "HeatmapData",
+  "data": [
+    {"lat": 37.7749, "lon": -122.4194, "weight": 95},
+    {"lat": 37.7750, "lon": -122.4195, "weight": 87}
+  ],
+  "bounds": {
+    "min_lat": 37.7700,
+    "max_lat": 37.7800,
+    "min_lon": -122.4300,
+    "max_lon": -122.4100
+  }
+}
+GET /map/restricted-zones
+Get restricted zone definitions.
+
+Response (GeoJSON):
+
+json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-122.42, 37.77], [-122.41, 37.77], [-122.41, 37.78], [-122.42, 37.78], [-122.42, 37.77]]]
+      },
+      "properties": {
+        "name": "Airport Restricted Zone",
+        "type": "no_fly",
+        "severity": "critical"
+      }
+    }
+  ]
+}
+POST /map/restricted-zones
+Add restricted zone.
+
+Request (GeoJSON):
+
+json
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [...]
+  },
+  "properties": {
+    "name": "New Restricted Zone",
+    "type": "no_fly",
+    "severity": "high"
+  }
+}
+Response:
+
+json
+{
+  "id": "uuid",
+  "created": true
+}
+Analytics
+GET /analytics/trends
+Get detection trends.
+
+Query Parameters:
+
+Parameter	Type	Description
+start_time	datetime	Start of time range
+end_time	datetime	End of time range
+granularity	string	Time granularity (hour, day, week, month)
+metrics	string	Comma-separated metrics to include
+Response:
+
+json
+{
+  "detection_trend": [
+    {"timestamp": "2024-01-01T00:00:00Z", "count": 42},
+    {"timestamp": "2024-01-02T00:00:00Z", "count": 38}
+  ],
+  "threat_trend": {
+    "critical": [0, 1, 2],
+    "high": [5, 3, 8]
+  },
+  "peak_hours": {
+    "0": 10, "1": 5, "2": 2, "3": 1, "4": 0, "5": 2,
+    "6": 15, "7": 45, "8": 60, "9": 55, "10": 50, "11": 48,
+    "12": 52, "13": 58, "14": 70, "15": 85, "16": 90, "17": 95,
+    "18": 88, "19": 75, "20": 65, "21": 55, "22": 40, "23": 25
+  },
+  "busiest_day": "Saturday",
+  "average_daily": 125.5
+}
+GET /analytics/predictions
+Get ML predictions for future drone activity.
+
+Response:
+
+json
+{
+  "predictions": [
+    {"timestamp": "2024-01-02T00:00:00Z", "predicted_count": 42, "confidence_interval": [35, 49]},
+    {"timestamp": "2024-01-03T00:00:00Z", "predicted_count": 38, "confidence_interval": [31, 45]}
+  ],
+  "model_accuracy": 0.87,
+  "features_used": ["hour_of_day", "day_of_week", "weather", "historical_trend"]
+}
+Recording & Playback
+POST /recordings/start
+Start IQ recording.
+
+Request:
+
+json
+{
+  "duration_seconds": 300,
+  "frequency": 2450000000,
+  "bandwidth": 20000000,
+  "format": "complex_int16",
+  "auto_stop": true
+}
+Response:
+
+json
+{
+  "recording_id": "uuid",
+  "status": "recording",
+  "file_path": "/data/iq/live/session_20240101_000000",
+  "estimated_size_mb": 500
+}
+POST /recordings/stop/{recording_id}
+Stop recording.
+
+Response:
+
+json
+{
+  "recording_id": "uuid",
+  "status": "stopped",
+  "duration_seconds": 300,
+  "file_size_mb": 478,
+  "file_path": "/data/iq/live/session_20240101_000000"
+}
+GET /recordings
+List recordings.
+
+Response:
+
+json
+{
+  "recordings": [
+    {
+      "id": "uuid",
+      "timestamp": "2024-01-01T00:00:00Z",
+      "duration_seconds": 300,
+      "frequency": 2450000000,
+      "sample_rate": 20000000,
+      "file_size_mb": 478,
+      "has_detections": true,
+      "detection_count": 5
+    }
+  ]
+}
+GET /recordings/{recording_id}/download
+Download recording file.
+
+Response: Binary IQ data download
+
+POST /recordings/{recording_id}/playback
+Start playback of recording.
+
+Request:
+
+json
+{
+  "speed": 1.0,
+  "loop": false,
+  "start_offset_seconds": 0
+}
+Response:
+
+json
+{
+  "playback_id": "uuid",
+  "status": "playing",
+  "websocket_url": "ws://localhost:8888/api/v1/ws/playback/{playback_id}"
+}
+Configuration
+GET /config
+Get system configuration.
+
+Response:
+
+json
+{
+  "system": {
+    "name": "Drone Detector",
+    "mode": "production",
+    "log_level": "INFO",
+    "timezone": "UTC"
+  },
+  "hardware": {
+    "type": "hackrf",
+    "sample_rate": 2000000,
+    "gain": 20
+  },
+  "detection": {
+    "threshold": 10,
+    "min_confidence": 0.7,
+    "update_interval_ms": 100
+  },
+  "alerts": {
+    "enabled": true,
+    "email_enabled": true,
+    "sms_enabled": false
+  },
+  "data_retention": {
+    "detections_days": 90,
+    "recordings_days": 30,
+    "spectrum_days": 7
+  }
+}
+PUT /config
+Update system configuration.
+
+Request: (partial config)
+
+Response: Updated full configuration
+
+GET /config/schema
+Get configuration schema for validation.
+
+Response:
+
+json
+{
+  "system": {
+    "type": "object",
+    "properties": {
+      "name": {"type": "string"},
+      "mode": {"enum": ["development", "production"]}
+    }
+  }
+}
+ML Model Management
+GET /ml/models
+List ML models.
+
+Response:
+
+json
+{
+  "models": [
+    {
+      "name": "classifier_v1",
+      "version": "1.0.0",
+      "created_at": "2024-01-01T00:00:00Z",
+      "accuracy": 0.95,
+      "size_mb": 45,
+      "active": true
+    }
+  ],
+  "active_model": "classifier_v1"
+}
+POST /ml/models/activate
+Activate a model.
+
+Request:
+
+json
+{
+  "model_name": "classifier_v2",
+  "version": "2.0.0"
+}
+Response:
+
+json
+{
+  "status": "activated",
+  "active_model": "classifier_v2"
+}
+POST /ml/models/train
+Start model training.
+
+Request:
+
+json
+{
+  "dataset": "drone_signatures_2024",
+  "epochs": 100,
+  "learning_rate": 0.001,
+  "batch_size": 32,
+  "validation_split": 0.2
+}
+Response:
+
+json
+{
+  "training_id": "uuid",
+  "status": "started",
+  "progress_url": "/api/v1/ml/training/{training_id}/status"
+}
+GET /ml/models/evaluate
+Evaluate model performance.
+
+Response:
+
+json
+{
+  "accuracy": 0.95,
+  "precision": 0.94,
+  "recall": 0.96,
+  "f1_score": 0.95,
+  "confusion_matrix": [
+    [85, 5, 2],
+    [3, 88, 4],
+    [2, 3, 90]
+  ],
+  "class_names": ["DJI", "FPV", "Custom"],
+  "feature_importance": {
+    "spectral_centroid": 0.25,
+    "peak_width": 0.20,
+    "rms_power": 0.15
+  }
+}
+Export & Reporting
+POST /exports/detections
+Export detections to file.
+
+Request:
+
+json
+{
+  "start_time": "2024-01-01T00:00:00Z",
+  "end_time": "2024-01-31T23:59:59Z",
+  "format": "csv",
+  "fields": ["timestamp", "drone_type", "frequency", "confidence", "threat_level"],
+  "filename": "detections_january.csv"
+}
+Response:
+
+json
+{
+  "export_id": "uuid",
+  "status": "processing",
+  "download_url": "/api/v1/exports/{export_id}/download",
+  "estimated_completion": "2024-01-01T00:01:00Z"
+}
+GET /exports/{export_id}/download
+Download exported file.
+
+Response: File download
+
+POST /reports/daily
+Generate daily report.
+
+Request:
+
+json
+{
+  "date": "2024-01-01",
+  "format": "pdf",
+  "include_spectrum": true,
+  "include_map": true
+}
+Response:
+
+json
+{
+  "report_id": "uuid",
+  "download_url": "/api/v1/reports/{report_id}/download",
+  "size_bytes": 1024000
+}
+GET /reports
+List generated reports.
+
+Response:
+
+json
+{
+  "reports": [
+    {
+      "id": "uuid",
+      "type": "daily",
+      "date": "2024-01-01",
+      "generated_at": "2024-01-02T00:00:00Z",
+      "size_bytes": 1024000,
+      "download_url": "/api/v1/reports/{id}/download"
+    }
+  ]
+}
+WebSocket API
+Connection Endpoint
+text
+ws://localhost:8888/api/v1/ws
+Authentication
+javascript
+// Method 1: Query parameter
+const ws = new WebSocket('ws://localhost:8888/api/v1/ws?token=your_jwt');
+
+// Method 2: After authentication (recommended)
+const ws = new WebSocket('ws://localhost:8888/api/v1/ws');
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    type: "auth",
+    token: "your_jwt"
+  }));
+};
+Subscription Messages
+javascript
+// Subscribe to detections
+ws.send(JSON.stringify({
+  type: "subscribe",
+  channel: "detections",
+  filters: {
+    min_confidence: 0.8,
+    threat_levels: ["high", "critical"]
+  }
+}));
+
+// Subscribe to spectrum
+ws.send(JSON.stringify({
+  type: "subscribe",
+  channel: "spectrum",
+  frequency: 2450000000,
+  bandwidth: 20000000
+}));
+
+// Subscribe to system status
+ws.send(JSON.stringify({
+  type: "subscribe",
+  channel: "system"
+}));
+
+// Unsubscribe
+ws.send(JSON.stringify({
+  type: "unsubscribe",
+  channel: "detections"
+}));
+Control Messages
+javascript
+// Start scan
+ws.send(JSON.stringify({
+  type: "command",
+  command: "start_scan",
+  params: {
+    start_freq: 2400000000,
+    end_freq: 2500000000
+  }
+}));
+
+// Start recording
+ws.send(JSON.stringify({
+  type: "command",
+  command: "start_recording",
+  params: {
+    duration: 300
+  }
+}));
+
+// Acknowledge alert
+ws.send(JSON.stringify({
+  type: "command",
+  command: "acknowledge_alert",
+  alert_id: "uuid"
+}));
+Received Messages
+javascript
+// Detection message
+{
+  "type": "detection",
+  "data": {
+    "detection_id": "uuid",
+    "drone_type": "DJI Mavic 3",
+    "confidence": 0.95,
+    "timestamp": "2024-01-01T00:00:00Z"
+  }
+}
+
+// Spectrum update
+{
+  "type": "spectrum",
+  "data": {
+    "timestamp": "2024-01-01T00:00:00Z",
+    "frequencies": [...],
+    "powers": [...]
+  }
+}
+
+// Alert message
+{
+  "type": "alert",
+  "severity": "high",
+  "title": "Unauthorized Drone",
+  "message": "Drone detected in restricted zone",
+  "detection_id": "uuid"
+}
+
+// System status
+{
+  "type": "status",
+  "data": {
+    "hardware": "connected",
+    "cpu_usage": 45.2,
+    "memory_usage": 512,
+    "uptime": 86400
+  }
+}
+
+// Heartbeat
+{
+  "type": "heartbeat",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+
+// Error
+{
+  "type": "error",
+  "code": "INVALID_COMMAND",
+  "message": "Unknown command: invalid_command"
+}
+Error Codes
+Code	Description
+AUTH_001	Invalid credentials
+AUTH_002	Token expired
+AUTH_003	Insufficient permissions
+AUTH_004	Invalid API key
+VALID_001	Missing required field
+VALID_002	Invalid field type
+VALID_003	Value out of range
+RES_001	Resource not found
+RES_002	Resource already exists
+RES_003	Resource conflict
+HW_001	Hardware not connected
+HW_002	Hardware busy
+HW_003	Hardware not supported
+DB_001	Database connection error
+DB_002	Query timeout
+DB_003	Constraint violation
+RATE_001	Rate limit exceeded
+API_001	Internal server error
+API_002	Service unavailable
+API_003	Gateway timeout
+SDK Examples
+Python
 python
-class DCBlocker:
-    """
-    Remove DC offset from IQ samples
-    """
-    
-    def __init__(self, alpha: float = 0.999):
-        """
-        Args:
-            alpha: Filter coefficient (0.95-0.999 typical)
-        """
-        self.alpha = alpha
-        self.dc_estimate = 0.0 + 0.0j
-    
-    def process(self, samples: np.ndarray) -> np.ndarray:
-        """Apply DC blocking filter"""
-        output = np.zeros_like(samples, dtype=np.complex64)
-        
-        for i, sample in enumerate(samples):
-            self.dc_estimate = self.alpha * self.dc_estimate + (1 - self.alpha) * sample
-            output[i] = sample - self.dc_estimate
-        
-        return output
-    
-    def process_vectorized(self, samples: np.ndarray) -> np.ndarray:
-        """Vectorized version for better performance"""
-        # Use cumulative moving average
-        dc = np.cumsum(samples) / np.arange(1, len(samples) + 1)
-        return samples - dc
-IQ Imbalance Correction
+from drone_detector import DroneDetectorClient
+
+# Initialize client
+client = DroneDetectorClient(
+    base_url="http://localhost:8888/api/v1",
+    api_key="your_api_key"
+)
+
+# Get detections
+detections = client.detections.list(
+    start_time="2024-01-01T00:00:00Z",
+    threat_level="high",
+    limit=10
+)
+
+# Real-time streaming
+async def on_detection(detection):
+    print(f"New detection: {detection.drone_type}")
+
+client.stream_detections(on_detection)
+
+# Get spectrum
+spectrum = client.spectrum.get_live()
+print(f"Center frequency: {spectrum.center_frequency}")
+
+# Control hardware
+client.hardware.configure(
+    center_frequency=2450000000,
+    gain=20
+)
+JavaScript
+javascript
+import DroneDetectorClient from 'drone-detector-sdk';
+
+const client = new DroneDetectorClient({
+  baseUrl: 'http://localhost:8888/api/v1',
+  apiKey: 'your_api_key'
+});
+
+// Get detections
+const detections = await client.detections.list({
+  startTime: '2024-01-01T00:00:00Z',
+  threatLevel: 'high',
+  limit: 10
+});
+
+// WebSocket streaming
+const stream = client.streamDetections();
+stream.on('detection', (detection) => {
+  console.log('New detection:', detection);
+});
+
+// Get spectrum
+const spectrum = await client.spectrum.getLive();
+console.log('Spectrum data:', spectrum);
+
+// Control hardware
+await client.hardware.configure({
+  centerFrequency: 2450000000,
+  gain: 20
+});
+cURL Examples
+bash
+# Login
+curl -X POST http://localhost:8888/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+
+# Get detections (with pagination)
+curl -X GET "http://localhost:8888/api/v1/detections?limit=10&offset=0" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get live spectrum
+curl -X GET http://localhost:8888/api/v1/spectrum/live \
+  -H "Authorization: Bearer $TOKEN"
+
+# Start recording
+curl -X POST http://localhost:8888/api/v1/recordings/start \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"duration_seconds":300,"frequency":2450000000}'
+
+# Export detections
+curl -X POST http://localhost:8888/api/v1/exports/detections \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"start_time":"2024-01-01T00:00:00Z","format":"csv"}'
+
+# Get system info
+curl -X GET http://localhost:8888/api/v1/system/info \
+  -H "Authorization: Bearer $TOKEN"
+API Versioning
+The API uses URL versioning (/api/v1/). Version changes follow semantic versioning:
+
+Major version (v1, v2): Breaking changes
+
+Minor version: New features, backwards compatible
+
+Patch version: Bug fixes, no API changes
+
+Version lifecycle:
+
+Current stable: v1
+
+Deprecated: v0 (removed after 6 months)
+
+Beta: v2-beta (available for testing)
+
+Version header: API-Version: 1.0
+
+Rate Limit Headers
+All responses include rate limit headers:
+
+text
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640995200
+Retry-After: 3600
+Exceeding limit:
+
+json
+{
+  "status": "error",
+  "error": {
+    "code": "RATE_001",
+    "message": "Rate limit exceeded. Try again in 3600 seconds."
+  }
+}
+Pagination
+Endpoints that return lists support pagination:
+
+Request:
+
+limit: Number of items per page (default: 50, max: 1000)
+
+offset: Number of items to skip (for offset-based pagination)
+
+page: Page number (for page-based pagination, used with per_page)
+
+Response headers:
+
+X-Total-Count: Total number of items
+
+X-Total-Pages: Total number of pages
+
+Example:
+
+bash
+curl "http://localhost:8888/api/v1/detections?limit=100&offset=200"
+Filtering & Sorting
+Filter Syntax
+text
+GET /api/v1/detections?field=value
+GET /api/v1/detections?field__gt=value      # Greater than
+GET /api/v1/detections?field__lt=value      # Less than
+GET /api/v1/detections?field__gte=value     # Greater than or equal
+GET /api/v1/detections?field__lte=value     # Less than or equal
+GET /api/v1/detections?field__contains=value # Contains substring
+GET /api/v1/detections?field__in=value1,value2 # In list
+Sorting
+text
+GET /api/v1/detections?sort=timestamp     # Ascending
+GET /api/v1/detections?sort=-timestamp    # Descending
+GET /api/v1/detections?sort=timestamp,confidence # Multiple fields
+OpenAPI Specification
+The API is fully documented with OpenAPI 3.0:
+
+Swagger UI: http://localhost:8888/docs
+
+ReDoc: http://localhost:8888/redoc
+
+OpenAPI JSON: http://localhost:8888/openapi.json
+
+OpenAPI YAML: http://localhost:8888/openapi.yaml
+
+Download the specification for client generation:
+
+bash
+curl http://localhost:8888/openapi.json > drone-detector-api.json
+Webhook Integration
+Configure webhooks for real-time notifications:
+
+bash
+curl -X POST http://localhost:8888/api/v1/alerts/config \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "webhook": {
+      "url": "https://your-server.com/webhook",
+      "events": ["detection", "alert"],
+      "secret": "your_webhook_secret",
+      "retry_count": 3,
+      "timeout_ms": 5000
+    }
+  }'
+Webhook payload:
+
+json
+{
+  "event": "detection",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "data": {
+    "detection_id": "uuid",
+    "drone_type": "DJI Mavic 3",
+    "confidence": 0.95
+  },
+  "signature": "sha256=abc123..."
+}
+Verify signature:
+
 python
-class IQImbalanceCorrector:
-    """
-    Correct IQ gain and phase imbalance
-    """
-    
-    def __init__(self):
-        self.gain_correction = 1.0
-        self.phase_correction = 0.0
-        self.trained = False
-    
-    def train(self, samples: np.ndarray):
-        """
-        Estimate imbalance parameters from pure tone
-        Assumes at least one strong tone in signal
-        """
-        # Extract I and Q components
-        I = np.real(samples)
-        Q = np.imag(samples)
-        
-        # Calculate gain imbalance
-        power_I = np.mean(I ** 2)
-        power_Q = np.mean(Q ** 2)
-        self.gain_correction = np.sqrt(power_Q / power_I)
-        
-        # Calculate phase imbalance
-        correlation = np.mean(I * Q)
-        self.phase_correction = np.arcsin(correlation / np.sqrt(power_I * power_Q))
-        
-        self.trained = True
-    
-    def correct(self, samples: np.ndarray) -> np.ndarray:
-        """Apply IQ imbalance correction"""
-        if not self.trained:
-            return samples
-        
-        I = np.real(samples)
-        Q = np.imag(samples)
-        
-        # Apply gain correction
-        I_corrected = I * self.gain_correction
-        
-        # Apply phase correction
-        Q_corrected = Q - I_corrected * self.phase_correction
-        
-        return I_corrected + 1j * Q_corrected
-Frequency Correction (Doppler/PLL)
-python
-class FrequencyCorrector:
-    """
-    Correct for frequency offsets using PLL or FFT-based estimation
-    """
-    
-    def __init__(self, sample_rate: float):
-        self.sample_rate = sample_rate
-        self.frequency_offset = 0.0
-        
-    def estimate_offset_fft(self, samples: np.ndarray) -> float:
-        """
-        Estimate frequency offset using FFT
-        """
-        # Compute FFT
-        spectrum = np.fft.fftshift(np.fft.fft(samples))
-        frequencies = np.fft.fftshift(np.fft.fftfreq(len(samples), 1/self.sample_rate))
-        
-        # Find peak
-        peak_idx = np.argmax(np.abs(spectrum))
-        self.frequency_offset = frequencies[peak_idx]
-        
-        return self.frequency_offset
-    
-    def correct(self, samples: np.ndarray) -> np.ndarray:
-        """Apply frequency correction"""
-        if self.frequency_offset == 0:
-            return samples
-        
-        t = np.arange(len(samples)) / self.sample_rate
-        correction = np.exp(-2j * np.pi * self.frequency_offset * t)
-        return samples * correction
-Stage 4: Fast Fourier Transform (FFT)
-Windowing Functions
-python
-class WindowFunctions:
-    """
-    Available windows for FFT preprocessing
-    """
-    
-    @staticmethod
-    def hamming(n: int) -> np.ndarray:
-        """Hamming window - good for frequency resolution"""
-        return 0.54 - 0.46 * np.cos(2 * np.pi * np.arange(n) / (n - 1))
-    
-    @staticmethod
-    def hann(n: int) -> np.ndarray:
-        """Hann window - good for amplitude accuracy"""
-        return 0.5 * (1 - np.cos(2 * np.pi * np.arange(n) / (n - 1)))
-    
-    @staticmethod
-    def blackman(n: int) -> np.ndarray:
-        """Blackman window - excellent side lobe suppression"""
-        a0, a1, a2 = 0.42, 0.5, 0.08
-        return a0 - a1 * np.cos(2 * np.pi * np.arange(n) / (n - 1)) + \
-               a2 * np.cos(4 * np.pi * np.arange(n) / (n - 1))
-    
-    @staticmethod
-    def kaiser(n: int, beta: float = 14) -> np.ndarray:
-        """Kaiser window - adjustable side lobe suppression"""
-        from scipy.signal import kaiser
-        return kaiser(n, beta)
-    
-    @staticmethod
-    def flat_top(n: int) -> np.ndarray:
-        """Flat-top window - best for amplitude accuracy"""
-        a0, a1, a2, a3, a4 = 0.21557895, 0.41663158, 0.277263158, 0.083578947, 0.006947368
-        k = np.arange(n)
-        return a0 - a1 * np.cos(2 * np.pi * k / (n - 1)) + \
-               a2 * np.cos(4 * np.pi * k / (n - 1)) - \
-               a3 * np.cos(6 * np.pi * k / (n - 1)) + \
-               a4 * np.cos(8 * np.pi * k / (n - 1))
-FFT Implementation
-python
-class FFTProcessor:
-    """
-    Fast Fourier Transform processor with configurable parameters
-    """
-    
-    def __init__(self, nfft: int = 1024, window: str = "hann", overlap: float = 0.5):
-        """
-        Args:
-            nfft: Number of FFT points
-            window: Window type (hann, hamming, blackman, kaiser, flat_top)
-            overlap: Overlap ratio for successive FFTs (0-1)
-        """
-        self.nfft = nfft
-        self.window_name = window
-        self.overlap = overlap
-        self.window = self._get_window(nfft, window)
-        self.hop = int(nfft * (1 - overlap))
-        
-    def _get_window(self, nfft: int, window_type: str) -> np.ndarray:
-        """Select and generate window function"""
-        windows = {
-            "hamming": WindowFunctions.hamming,
-            "hann": WindowFunctions.hann,
-            "blackman": WindowFunctions.blackman,
-            "kaiser": lambda n: WindowFunctions.kaiser(n, 14),
-            "flat_top": WindowFunctions.flat_top
-        }
-        
-        if window_type in windows:
-            window = windows[window_type](nfft)
-        else:
-            window = np.ones(nfft)
-        
-        # Normalize for power conservation
-        window /= np.sqrt(np.mean(window ** 2))
-        
-        return window
-    
-    def compute_spectrum(self, samples: np.ndarray) -> np.ndarray:
-        """
-        Compute power spectrum using Welch's method
-        """
-        # Pad samples if needed
-        if len(samples) < self.nfft:
-            samples = np.pad(samples, (0, self.nfft - len(samples)))
-        
-        # Number of FFT frames
-        n_frames = 1 + (len(samples) - self.nfft) // self.hop
-        
-        # Initialize spectrogram
-        spectrum = np.zeros((n_frames, self.nfft // 2 + 1), dtype=np.float32)
-        
-        for i in range(n_frames):
-            start = i * self.hop
-            end = start + self.nfft
-            frame = samples[start:end]
-            
-            # Apply window and compute FFT
-            windowed = frame * self.window
-            fft = np.fft.rfft(windowed)
-            
-            # Compute power (magnitude squared)
-            spectrum[i] = np.abs(fft) ** 2
-        
-        # Average across frames
-        avg_spectrum = np.mean(spectrum, axis=0)
-        
-        return avg_spectrum
-    
-    def compute_spectrogram(self, samples: np.ndarray) -> tuple:
-        """
-        Compute full spectrogram (waterfall)
-        
-        Returns:
-            spectrogram: 2D array of powers (frames x frequencies)
-            frequencies: Frequency axis values
-            times: Time axis values
-        """
-        n_frames = 1 + (len(samples) - self.nfft) // self.hop
-        spectrogram = np.zeros((n_frames, self.nfft // 2 + 1), dtype=np.float32)
-        
-        for i in range(n_frames):
-            start = i * self.hop
-            end = start + self.nfft
-            frame = samples[start:end]
-            
-            windowed = frame * self.window
-            fft = np.fft.rfft(windowed)
-            spectrogram[i] = 10 * np.log10(np.abs(fft) ** 2 + 1e-12)
-        
-        frequencies = np.fft.rfftfreq(self.nfft, 1/self.sample_rate)
-        times = np.arange(n_frames) * self.hop / self.sample_rate
-        
-        return spectrogram, frequencies, times
-Stage 5: Power Spectral Density (PSD)
-PSD Calculation
-python
-class PSDCalculator:
-    """
-    Power Spectral Density estimation using multiple methods
-    """
-    
-    def __init__(self, sample_rate: float, method: str = "welch"):
-        self.sample_rate = sample_rate
-        self.method = method  # welch, periodogram, multitaper, burg
-        
-    def welch_method(self, samples: np.ndarray, 
-                     segment_length: int = 256,
-                     overlap: float = 0.5) -> tuple:
-        """
-        Welch's averaged periodogram method
-        """
-        from scipy import signal
-        
-        frequencies, psd = signal.welch(
-            samples,
-            fs=self.sample_rate,
-            nperseg=segment_length,
-            noverlap=int(segment_length * overlap),
-            window='hann',
-            scaling='density',
-            return_onesided=True
-        )
-        
-        # Convert to dBm/Hz
-        psd_dbm = 10 * np.log10(psd * 1000)
-        
-        return frequencies, psd_dbm
-    
-    def periodogram_method(self, samples: np.ndarray) -> tuple:
-        """
-        Simple periodogram (single FFT)
-        """
-        n = len(samples)
-        fft = np.fft.rfft(samples)
-        psd = np.abs(fft) ** 2 / (n * self.sample_rate)
-        
-        frequencies = np.fft.rfftfreq(n, 1/self.sample_rate)
-        psd_dbm = 10 * np.log10(psd * 1000)
-        
-        return frequencies, psd_dbm
-    
-    def multitaper_method(self, samples: np.ndarray, 
-                          time_bandwidth: float = 4,
-                          n_tapers: int = 7) -> tuple:
-        """
-        Multitaper spectral estimation (better variance)
-        """
-        from scipy import signal
-        
-        # Compute DPSS tapers
-        tapers, _ = signal.dpss(len(samples), time_bandwidth, n_tapers)
-        
-        # Compute spectrums for each taper
-        psd_sum = np.zeros(len(samples) // 2 + 1)
-        
-        for taper in tapers:
-            windowed = samples * taper
-            fft = np.fft.rfft(windowed)
-            psd_sum += np.abs(fft) ** 2
-        
-        psd = psd_sum / (len(tapers) * len(samples) * self.sample_rate)
-        
-        frequencies = np.fft.rfftfreq(len(samples), 1/self.sample_rate)
-        psd_dbm = 10 * np.log10(psd * 1000 + 1e-12)
-        
-        return frequencies, psd_dbm
-    
-    def compute_psd(self, samples: np.ndarray) -> tuple:
-        """Compute PSD using selected method"""
-        methods = {
-            "welch": self.welch_method,
-            "periodogram": self.periodogram_method,
-            "multitaper": self.multitaper_method
-        }
-        
-        method_func = methods.get(self.method, self.welch_method)
-        return method_func(samples)
-Noise Floor Estimation
-python
-class NoiseFloorEstimator:
-    """
-    Estimate noise floor from PSD
-    """
-    
-    def __init__(self, method: str = "median"):
-        self.method = method  # median, mode, percentile, iterative
-        
-    def estimate_median(self, psd: np.ndarray) -> float:
-        """Median-based noise floor"""
-        return np.median(psd)
-    
-    def estimate_mode(self, psd: np.ndarray) -> float:
-        """Mode-based estimation (most common value)"""
-        hist, bins = np.histogram(psd, bins=100)
-        mode_idx = np.argmax(hist)
-        return bins[mode_idx]
-    
-    def estimate_percentile(self, psd: np.ndarray, percentile: float = 10) -> float:
-        """Percentile-based estimation"""
-        return np.percentile(psd, percentile)
-    
-    def estimate_iterative(self, psd: np.ndarray, sigma_threshold: float = 2.5) -> float:
-        """
-        Iterative clipping algorithm
-        """
-        psd_clipped = psd.copy()
-        
-        for _ in range(5):
-            mean = np.mean(psd_clipped)
-            std = np.std(psd_clipped)
-            threshold = mean + sigma_threshold * std
-            
-            psd_clipped = psd_clipped[psd_clipped < threshold]
-            
-            if len(psd_clipped) < len(psd) * 0.1:
-                break
-        
-        return np.mean(psd_clipped)
-    
-    def estimate_noise_floor(self, psd: np.ndarray) -> tuple:
-        """
-        Estimate noise floor and signal-to-noise ratio
-        """
-        if self.method == "median":
-            noise_floor = self.estimate_median(psd)
-        elif self.method == "mode":
-            noise_floor = self.estimate_mode(psd)
-        elif self.method == "percentile":
-            noise_floor = self.estimate_percentile(psd)
-        elif self.method == "iterative":
-            noise_floor = self.estimate_iterative(psd)
-        else:
-            noise_floor = self.estimate_median(psd)
-        
-        return noise_floor
-Stage 6: Peak Detection
-Peak Detection Algorithms
-python
-class PeakDetector:
-    """
-    Detect signal peaks in PSD
-    """
-    
-    def __init__(self, 
-                 threshold_db: float = 10,
-                 min_distance: int = 10,
-                 prominence: float = 3):
-        """
-        Args:
-            threshold_db: Minimum peak height above noise floor
-            min_distance: Minimum distance between peaks (bins)
-            prominence: Minimum peak prominence (dB)
-        """
-        self.threshold_db = threshold_db
-        self.min_distance = min_distance
-        self.prominence = prominence
-        
-    def detect_simple(self, psd: np.ndarray, 
-                      noise_floor: float) -> list:
-        """
-        Simple threshold-based peak detection
-        """
-        threshold = noise_floor + self.threshold_db
-        peaks = []
-        
-        for i in range(1, len(psd) - 1):
-            if psd[i] > threshold and \
-               psd[i] > psd[i-1] and \
-               psd[i] > psd[i+1]:
-                peaks.append(i)
-        
-        # Merge close peaks
-        merged_peaks = self._merge_close_peaks(peaks, self.min_distance)
-        
-        return merged_peaks
-    
-    def detect_scipy(self, psd: np.ndarray) -> list:
-        """
-        Use scipy's peak detection
-        """
-        from scipy import signal
-        
-        peaks, properties = signal.find_peaks(
-            psd,
-            height=self.threshold_db,
-            distance=self.min_distance,
-            prominence=self.prominence,
-            width=2
-        )
-        
-        return peaks.tolist()
-    
-    def detect_adaptive(self, psd: np.ndarray, 
-                        noise_floor: np.ndarray) -> list:
-        """
-        Adaptive threshold using background estimate
-        """
-        # Calculate adaptive threshold
-        window_size = 21
-        threshold = np.zeros_like(psd)
-        
-        for i in range(len(psd)):
-            start = max(0, i - window_size // 2)
-            end = min(len(psd), i + window_size // 2)
-            threshold[i] = np.mean(noise_floor[start:end]) + self.threshold_db
-        
-        peaks = []
-        for i in range(1, len(psd) - 1):
-            if psd[i] > threshold[i] and \
-               psd[i] > psd[i-1] and \
-               psd[i] > psd[i+1]:
-                peaks.append(i)
-        
-        return peaks
-    
-    def _merge_close_peaks(self, peaks: list, min_distance: int) -> list:
-        """Merge peaks that are too close"""
-        if not peaks:
-            return []
-        
-        merged = [peaks[0]]
-        for peak in peaks[1:]:
-            if peak - merged[-1] >= min_distance:
-                merged.append(peak)
-        
-        return merged
-    
-    def characterize_peak(self, psd: np.ndarray, 
-                          peak_idx: int, 
-                          frequencies: np.ndarray) -> dict:
-        """
-        Extract peak characteristics
-        """
-        # Peak parameters
-        peak_freq = frequencies[peak_idx]
-        peak_power = psd[peak_idx]
-        
-        # Find 3dB bandwidth
-        half_power = peak_power - 3
-        left_idx = peak_idx
-        right_idx = peak_idx
-        
-        while left_idx > 0 and psd[left_idx] > half_power:
-            left_idx -= 1
-        
-        while right_idx < len(psd) - 1 and psd[right_idx] > half_power:
-            right_idx += 1
-        
-        bandwidth_3db = frequencies[right_idx] - frequencies[left_idx]
-        
-        # Calculate occupied bandwidth (99% power)
-        total_power = np.sum(psd)
-        cumulative = 0
-        left_idx_99 = 0
-        right_idx_99 = len(psd) - 1
-        
-        for i in range(peak_idx, -1, -1):
-            cumulative += psd[i]
-            if cumulative / total_power > 0.005:  # 0.5% from peak
-                left_idx_99 = i
-                break
-        
-        cumulative = 0
-        for i in range(peak_idx, len(psd)):
-            cumulative += psd[i]
-            if cumulative / total_power > 0.005:
-                right_idx_99 = i
-                break
-        
-        occupied_bw = frequencies[right_idx_99] - frequencies[left_idx_99]
-        
-        return {
-            "frequency": peak_freq,
-            "power": peak_power,
-            "bandwidth_3db": bandwidth_3db,
-            "occupied_bandwidth": occupied_bw,
-            "peak_width_bins": right_idx - left_idx,
-            "peak_prominence": peak_power - np.mean(
-                [psd[peak_idx - 5], psd[peak_idx + 5]]
-            )
-        }
-Stage 7: Feature Extraction
-Feature Vector Generation
-python
-class FeatureExtractor:
-    """
-    Extract discriminative features for ML classification
-    """
-    
-    def __init__(self, sample_rate: float):
-        self.sample_rate = sample_rate
-        
-    def extract_features(self, samples: np.ndarray, 
-                         psd: np.ndarray,
-                         frequencies: np.ndarray,
-                         peaks: list) -> dict:
-        """
-        Comprehensive feature extraction
-        """
-        features = {}
-        
-        # Time domain features
-        features.update(self._time_domain_features(samples))
-        
-        # Frequency domain features
-        features.update(self._frequency_domain_features(psd, frequencies))
-        
-        # Statistical features
-        features.update(self._statistical_features(psd))
-        
-        # Peak features
-        features.update(self._peak_features(psd, frequencies, peaks))
-        
-        # Cyclostationary features
-        features.update(self._cyclostationary_features(samples))
-        
-        return features
-    
-    def _time_domain_features(self, samples: np.ndarray) -> dict:
-        """Extract time-domain features"""
-        amplitude = np.abs(samples)
-        phase = np.angle(samples)
-        
-        features = {
-            "rms_power_db": 10 * np.log10(np.mean(amplitude ** 2) + 1e-12),
-            "peak_to_average_ratio": np.max(amplitude) / (np.mean(amplitude) + 1e-12),
-            "crest_factor": np.max(amplitude) / (np.sqrt(np.mean(amplitude ** 2)) + 1e-12),
-            "kurtosis": self._kurtosis(amplitude),
-            "skewness": self._skewness(amplitude),
-            "zero_crossing_rate": self._zero_crossing_rate(phase),
-            "phase_variance": np.var(phase),
-            "phase_range": np.max(phase) - np.min(phase)
-        }
-        
-        return features
-    
-    def _frequency_domain_features(self, psd: np.ndarray, 
-                                    frequencies: np.ndarray) -> dict:
-        """Extract frequency-domain features"""
-        # Spectral centroid
-        spectral_centroid = np.sum(frequencies * psd) / (np.sum(psd) + 1e-12)
-        
-        # Spectral spread
-        spectral_spread = np.sqrt(
-            np.sum(((frequencies - spectral_centroid) ** 2) * psd) / (np.sum(psd) + 1e-12)
-        )
-        
-        # Spectral flatness (Wiener entropy)
-        geometric_mean = np.exp(np.mean(np.log(psd + 1e-12)))
-        arithmetic_mean = np.mean(psd)
-        spectral_flatness = geometric_mean / (arithmetic_mean + 1e-12)
-        
-        # Spectral rolloff (95% energy)
-        cumulative_energy = np.cumsum(psd)
-        total_energy = cumulative_energy[-1]
-        rolloff_idx = np.where(cumulative_energy >= 0.95 * total_energy)[0]
-        spectral_rolloff = frequencies[rolloff_idx[0]] if len(rolloff_idx) > 0 else 0
-        
-        # Spectral bandwidth
-        spectral_bandwidth = np.sqrt(
-            np.sum(((frequencies - spectral_centroid) ** 2) * psd) / (np.sum(psd) + 1e-12)
-        )
-        
-        # Spectral contrast
-        energy_peaks = []
-        energy_valleys = []
-        
-        n_bands = 8
-        band_size = len(psd) // n_bands
-        
-        for i in range(n_bands):
-            start = i * band_size
-            end = (i + 1) * band_size
-            band_psd = psd[start:end]
-            
-            if len(band_psd) > 10:
-                sorted_psd = np.sort(band_psd)
-                energy_peaks.append(np.mean(sorted_psd[-5:]))
-                energy_valleys.append(np.mean(sorted_psd[:5]))
-        
-        spectral_contrast = np.mean(energy_peaks) / (np.mean(energy_valleys) + 1e-12)
-        
-        return {
-            "spectral_centroid": spectral_centroid,
-            "spectral_spread": spectral_spread,
-            "spectral_flatness": spectral_flatness,
-            "spectral_rolloff": spectral_rolloff,
-            "spectral_bandwidth": spectral_bandwidth,
-            "spectral_contrast": spectral_contrast
-        }
-    
-    def _statistical_features(self, psd: np.ndarray) -> dict:
-        """Extract statistical features"""
-        from scipy import stats
-        
-        return {
-            "psd_mean": np.mean(psd),
-            "psd_median": np.median(psd),
-            "psd_std": np.std(psd),
-            "psd_variance": np.var(psd),
-            "psd_skewness": self._skewness(psd),
-            "psd_kurtosis": self._kurtosis(psd),
-            "psd_entropy": stats.entropy(psd + 1e-12)
-        }
-    
-    def _peak_features(self, psd: np.ndarray, 
-                       frequencies: np.ndarray, 
-                       peaks: list) -> dict:
-        """Extract features from detected peaks"""
-        if not peaks:
-            return {
-                "num_peaks": 0,
-                "max_peak_power": 0,
-                "total_peak_power": 0,
-                "peak_frequency_spread": 0,
-                "strongest_peak_bw": 0
-            }
-        
-        peak_powers = [psd[p] for p in peaks]
-        peak_frequencies = [frequencies[p] for p in peaks]
-        
-        features = {
-            "num_peaks": len(peaks),
-            "max_peak_power": np.max(peak_powers),
-            "total_peak_power": np.sum(peak_powers),
-            "peak_frequency_spread": np.max(peak_frequencies) - np.min(peak_frequencies),
-            "peak_power_variance": np.var(peak_powers),
-            "peak_power_skewness": self._skewness(peak_powers),
-            "strongest_peak_idx": peaks[np.argmax(peak_powers)]
-        }
-        
-        # Add bandwidth of strongest peak
-        strongest_idx = peaks[np.argmax(peak_powers)]
-        half_power = max(peak_powers) - 3
-        left = strongest_idx
-        right = strongest_idx
-        
-        while left > 0 and psd[left] > half_power:
-            left -= 1
-        while right < len(psd) - 1 and psd[right] > half_power:
-            right += 1
-        
-        features["strongest_peak_bw"] = frequencies[right] - frequencies[left]
-        
-        return features
-    
-    def _cyclostationary_features(self, samples: np.ndarray) -> dict:
-        """
-        Extract cyclostationary features for modulation classification
-        """
-        # Calculate cyclic autocorrelation
-        alpha = 0.001  # Cycle frequency
-        n = len(samples)
-        
-        # Simple cyclostationary detection
-        cyclic_autocorr = np.correlate(
-            samples * np.exp(-1j * 2 * np.pi * alpha * np.arange(n)),
-            samples,
-            mode='full'
-        )
-        
-        # Normalized cyclic autocorrelation
-        cyclic_autocorr_norm = np.abs(cyclic_autocorr) / (np.abs(np.corrcoef(samples, samples)[0, 1]) + 1e-12)
-        
-        features = {
-            "cyclic_autocorr_max": np.max(cyclic_autocorr_norm),
-            "cyclic_autocorr_std": np.std(cyclic_autocorr_norm),
-            "modulation_index": np.max(cyclic_autocorr_norm[int(n/2):])  # Simplified
-        }
-        
-        return features
-    
-    def _kurtosis(self, data: np.ndarray) -> float:
-        """Calculate kurtosis (fourth moment)"""
-        mean = np.mean(data)
-        std = np.std(data) + 1e-12
-        return np.mean(((data - mean) / std) ** 4) - 3
-    
-    def _skewness(self, data: np.ndarray) -> float:
-        """Calculate skewness (third moment)"""
-        mean = np.mean(data)
-        std = np.std(data) + 1e-12
-        return np.mean(((data - mean) / std) ** 3)
-    
-    def _zero_crossing_rate(self, phase: np.ndarray) -> float:
-        """Calculate zero crossing rate of phase signal"""
-        phase_diff = np.diff(np.unwrap(phase))
-        zero_crossings = np.where(np.diff(np.sign(phase_diff)))[0]
-        return len(zero_crossings) / len(phase_diff)
-Stage 8: Signal Classification
-ML Classifier Integration
-python
-class SignalClassifier:
-    """
-    ML-based signal classification
-    """
-    
-    def __init__(self, model_path: str):
-        self.model = self._load_model(model_path)
-        self.classes = [
-            "DJI OcuSync",
-            "DJI O4",
-            "FPV Analog",
-            "FPV Digital (HDZero)",
-            "FPV Digital (DJI)",
-            "WiFi Drone",
-            "Custom OFDM",
-            "LoRa Telemetry",
-            "Interference",
-            "Noise"
-        ]
-        
-    def _load_model(self, model_path: str):
-        """Load trained ML model"""
-        import joblib
-        return joblib.load(model_path)
-    
-    def predict(self, features: dict) -> tuple:
-        """
-        Classify signal from features
-        """
-        # Convert features to vector
-        feature_vector = self._features_to_vector(features)
-        
-        # Predict class and probabilities
-        predicted_class_idx = self.model.predict([feature_vector])[0]
-        probabilities = self.model.predict_proba([feature_vector])[0]
-        
-        predicted_class = self.classes[predicted_class_idx]
-        confidence = probabilities[predicted_class_idx]
-        
-        return predicted_class, confidence, probabilities
-    
-    def _features_to_vector(self, features: dict) -> np.ndarray:
-        """Convert feature dict to fixed-length vector"""
-        # Define expected feature order
-        feature_order = [
-            "rms_power_db", "peak_to_average_ratio", "crest_factor",
-            "kurtosis", "skewness", "zero_crossing_rate",
-            "spectral_centroid", "spectral_spread", "spectral_flatness",
-            "spectral_rolloff", "num_peaks", "max_peak_power",
-            "total_peak_power", "strongest_peak_bw", "cyclic_autocorr_max"
-        ]
-        
-        vector = []
-        for feature_name in feature_order:
-            vector.append(features.get(feature_name, 0))
-        
-        return np.array(vector)
-Stage 9: Drone Identification
-Signature Matching
-python
-class DroneSignatureMatcher:
-    """
-    Match detected signals against known drone signatures
-    """
-    
-    def __init__(self, signatures_db_path: str):
-        self.signatures = self._load_signatures(signatures_db_path)
-        
-    def _load_signatures(self, path: str) -> dict:
-        """Load drone signature database"""
-        import json
-        with open(path, 'r') as f:
-            return json.load(f)
-    
-    def match_signature(self, features: dict, 
-                        psd: np.ndarray,
-                        frequencies: np.ndarray) -> dict:
-        """
-        Match detected signal against known signatures
-        """
-        matches = []
-        
-        for drone_type, signature in self.signatures.items():
-            score = self._calculate_similarity(features, psd, frequencies, signature)
-            matches.append({
-                "drone_type": drone_type,
-                "similarity_score": score,
-                "confidence": self._score_to_confidence(score)
-            })
-        
-        # Sort by similarity score
-        matches.sort(key=lambda x: x["similarity_score"], reverse=True)
-        
-        best_match = matches[0]
-        
-        return {
-            "drone_type": best_match["drone_type"],
-            "confidence": best_match["confidence"],
-            "all_matches": matches[:3],
-            "is_known_drone": best_match["similarity_score"] > 0.7
-        }
-    
-    def _calculate_similarity(self, features: dict, psd: np.ndarray,
-                              frequencies: np.ndarray, signature: dict) -> float:
-        """
-        Calculate similarity between detected signal and signature
-        """
-        scores = []
-        
-        # Frequency band match
-        if "frequency_bands" in signature:
-            detected_freq = features.get("spectral_centroid", 0)
-            for band in signature["frequency_bands"]:
-                if band["start"] <= detected_freq <= band["end"]:
-                    scores.append(1.0)
-                else:
-                    scores.append(0.0)
-        
-        # Spectral shape correlation
-        if "spectral_template" in signature:
-            # Resample PSD to match template length
-            template = np.array(signature["spectral_template"])
-            if len(psd) > len(template):
-                psd_resampled = np.interp(
-                    np.linspace(0, len(psd)-1, len(template)),
-                    np.arange(len(psd)),
-                    psd
-                )
-            else:
-                psd_resampled = psd
-            
-            correlation = np.corrcoef(psd_resampled, template)[0, 1]
-            scores.append(max(0, correlation))
-        
-        # Feature matching
-        if "expected_features" in signature:
-            for feat_name, expected_value in signature["expected_features"].items():
-                if feat_name in features:
-                    actual = features[feat_name]
-                    tolerance = signature.get("tolerances", {}).get(feat_name, 0.1)
-                    error = abs(actual - expected_value) / (expected_value + 1e-12)
-                    feature_score = max(0, 1 - error / tolerance)
-                    scores.append(feature_score)
-        
-        # Average all scores
-        overall_score = np.mean(scores) if scores else 0.5
-        
-        return overall_score
-    
-    def _score_to_confidence(self, score: float) -> float:
-        """Convert similarity score to confidence percentage"""
-        if score >= 0.9:
-            return 0.95 + (score - 0.9) * 0.5
-        elif score >= 0.7:
-            return 0.7 + (score - 0.7) * 1.25
-        elif score >= 0.5:
-            return 0.5 + (score - 0.5) * 1.0
-        else:
-            return score * 1.0
-Stage 10: Detection Event Generation
-Final Detection Pipeline
-python
-class DetectionPipeline:
-    """
-    Complete signal processing pipeline
-    """
-    
-    def __init__(self, config: dict):
-        self.config = config
-        self.fft_processor = FFTProcessor(
-            nfft=config.get("nfft", 1024),
-            window=config.get("window", "hann")
-        )
-        self.psd_calculator = PSDCalculator(
-            sample_rate=config.get("sample_rate", 2e6),
-            method=config.get("psd_method", "welch")
-        )
-        self.peak_detector = PeakDetector(
-            threshold_db=config.get("peak_threshold", 10),
-            min_distance=config.get("min_peak_distance", 10)
-        )
-        self.feature_extractor = FeatureExtractor(
-            sample_rate=config.get("sample_rate", 2e6)
-        )
-        self.classifier = SignalClassifier(
-            model_path=config.get("model_path", "models/classifier.pkl")
-        )
-        self.signature_matcher = DroneSignatureMatcher(
-            signatures_db_path=config.get("signatures_path", "config/drone_signatures.json")
-        )
-        self.noise_estimator = NoiseFloorEstimator(method="median")
-    
-    async def process_iq_stream(self, iq_samples: np.ndarray) -> dict:
-        """
-        Process streaming IQ data through complete pipeline
-        """
-        # Stage 3: IQ Preprocessing
-        iq_corrected = self._preprocess_iq(iq_samples)
-        
-        # Stage 4 & 5: Compute PSD
-        frequencies, psd = self.psd_calculator.compute_psd(iq_corrected)
-        
-        # Stage 5b: Estimate noise floor
-        noise_floor = self.noise_estimator.estimate_noise_floor(psd)
-        
-        # Stage 6: Detect peaks
-        peaks = self.peak_detector.detect_scipy(psd - noise_floor)
-        
-        if not peaks:
-            return {"detection": None, "reason": "No peaks detected"}
-        
-        # Stage 7: Extract features
-        features = self.feature_extractor.extract_features(
-            iq_corrected, psd, frequencies, peaks
-        )
-        
-        # Stage 8: ML Classification
-        drone_type, ml_confidence, probabilities = self.classifier.predict(features)
-        
-        # Stage 9: Signature matching
-        signature_match = self.signature_matcher.match_signature(
-            features, psd, frequencies
-        )
-        
-        # Combine results
-        final_confidence = (ml_confidence + signature_match["confidence"]) / 2
-        
-        # Stage 10: Generate detection event
-        detection_event = {
-            "timestamp": datetime.now().isoformat(),
-            "frequency_hz": frequencies[peaks[0]] + self.config.get("center_frequency", 0),
-            "power_dbm": float(psd[peaks[0]]),
-            "snr_db": float(psd[peaks[0]] - noise_floor),
-            "bandwidth_hz": features.get("strongest_peak_bw", 0),
-            "drone_type": signature_match["drone_type"],
-            "ml_classification": drone_type,
-            "confidence": final_confidence,
-            "features": features,
-            "threat_level": self._assess_threat(
-                drone_type, final_confidence, features
-            ),
-            "spectrum": {
-                "frequencies": frequencies.tolist(),
-                "psd": psd.tolist(),
-                "peaks": peaks
-            }
-        }
-        
-        return {"detection": detection_event, "reason": "Detection successful"}
-    
-    def _preprocess_iq(self, samples: np.ndarray) -> np.ndarray:
-        """Apply preprocessing steps"""
-        # Remove DC offset
-        samples = samples - np.mean(samples)
-        
-        # Apply gain normalization
-        samples = samples / (np.std(samples) + 1e-12)
-        
-        return samples
-    
-    def _assess_threat(self, drone_type: str, 
-                       confidence: float, 
-                       features: dict) -> dict:
-        """Assess threat level based on detection"""
-        # Threat levels: NONE, LOW, MEDIUM, HIGH, CRITICAL
-        
-        threat_score = 0
-        
-        # Based on drone type
-        high_threat_drones = ["Custom OFDM", "LoRa Telemetry"]
-        medium_threat_drones = ["DJI OcuSync", "DJI O4"]
-        
-        if drone_type in high_threat_drones:
-            threat_score += 40
-        elif drone_type in medium_threat_drones:
-            threat_score += 20
-        
-        # Based on confidence
-        threat_score += int(confidence * 30)
-        
-        # Based on signal power
-        power = features.get("rms_power_db", -100)
-        if power > -30:
-            threat_score += 20
-        elif power > -50:
-            threat_score += 10
-        
-        # Determine threat level
-        if threat_score >= 80:
-            level = "CRITICAL"
-        elif threat_score >= 60:
-            level = "HIGH"
-        elif threat_score >= 40:
-            level = "MEDIUM"
-        elif threat_score >= 20:
-            level = "LOW"
-        else:
-            level = "NONE"
-        
-        return {
-            "level": level,
-            "score": threat_score,
-            "factors": {
-                "drone_type": drone_type,
-                "confidence": confidence,
-                "signal_power": power
-            }
-        }
-Performance Optimization
-Accelerated Processing
-python
-class OptimizedSignalProcessor:
-    """
-    GPU-accelerated signal processing using CuPy
-    """
-    
-    def __init__(self):
-        self.use_gpu = self._check_gpu_availability()
-        if self.use_gpu:
-            import cupy as cp
-            self.xp = cp
-        else:
-            import numpy as np
-            self.xp = np
-    
-    def _check_gpu_availability(self) -> bool:
-        """Check if GPU/CUDA is available"""
-        try:
-            import cupy as cp
-            cp.cuda.runtime.getDeviceCount()
-            return True
-        except:
-            return False
-    
-    def process_batch(self, iq_batch: np.ndarray) -> np.ndarray:
-        """Process batch of IQ data on GPU if available"""
-        if self.use_gpu:
-            # Transfer to GPU
-            iq_gpu = self.xp.asarray(iq_batch)
-            
-            # FFT on GPU
-            spectrum = self.xp.fft.rfft(iq_gpu)
-            psd = self.xp.abs(spectrum) ** 2
-            
-            # Transfer back to CPU
-            return self.xp.asnumpy(psd)
-        else:
-            # CPU processing
-            spectrum = np.fft.rfft(iq_batch)
-            return np.abs(spectrum) ** 2
-Real-Time Processing Requirements
-python
-class RealTimeProcessor:
-    """
-    Real-time signal processing with latency guarantees
-    """
-    
-    def __init__(self, target_latency_ms: float = 100):
-        self.target_latency = target_latency_ms / 1000
-        self.processing_times = []
-        
-    async def process_stream(self, stream_generator):
-        """Process stream with latency monitoring"""
-        async for iq_frame in stream_generator:
-            start_time = time.time()
-            
-            # Process frame
-            detection = await self._process_frame(iq_frame)
-            
-            processing_time = time.time() - start_time
-            
-            # Monitor latency
-            self.processing_times.append(processing_time)
-            
-            if processing_time > self.target_latency:
-                logger.warning(f"Processing latency exceeded: {processing_time*1000:.2f}ms")
-            
-            yield detection
-    
-    async def _process_frame(self, iq_frame):
-        """Single frame processing"""
-        # Simplified for example
-        return {
-            "timestamp": datetime.now(),
-            "processing_time_ms": (time.time() - start_time) * 1000
-        }
-This comprehensive signal chain documentation covers the entire processing pipeline from RF front-end through final drone detection, providing implementable algorithms and performance considerations for production deployment.
+import hmac
+import hashlib
+
+def verify_signature(payload, signature, secret):
+    expected = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected)
