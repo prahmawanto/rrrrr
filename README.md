@@ -1,1237 +1,918 @@
-# Drone Detector System - Deployment Guide
+# Drone Detector System - Hardware Setup Guide
 
 ## Overview
 
-This guide covers deployment of the Drone Detector system in various environments, from development to production. The system supports multiple deployment strategies including Docker Compose, Kubernetes, and bare-metal installations.
+This guide covers the installation, configuration, and optimization of SDR (Software Defined Radio) hardware for the Drone Detector system. It includes setup procedures for supported devices, antenna selection, calibration, and performance tuning.
 
-## Deployment Architecture Options
+## Supported Hardware
 
-### 1. Single-Node Deployment (Small/Medium Scale)
-- Suitable for: Testing, small facilities, up to 5 SDRs
-- Components: All services on one machine
-- Hardware Requirements: 8+ cores, 16GB+ RAM, 256GB+ storage
+### SDR Devices
 
-### 2. Multi-Node Deployment (Production)
-- Suitable for: Large facilities, multiple locations
-- Components: Distributed across multiple servers
-- Hardware Requirements: 3+ nodes, 16+ cores each, 32GB+ RAM each
+| Device | Frequency Range | Bandwidth | Interface | Status | Use Case |
+|--------|----------------|-----------|-----------|--------|----------|
+| HackRF One | 1 MHz - 6 GHz | 20 MHz | USB 2.0 | ✅ Full Support | Multi-band scanning |
+| RTL-SDR v3 | 500 kHz - 1.7 GHz | 2.4 MHz | USB 2.0 | ✅ Full Support | Cost-effective 2.4GHz |
+| RTL-SDR v4 | 500 kHz - 1.7 GHz | 3.2 MHz | USB 3.0 | ✅ Full Support | Improved dynamic range |
+| ADALM-PLUTO | 325 MHz - 3.8 GHz | 20 MHz | USB 2.0 | ✅ Full Support | Educational/2.4GHz |
+| LimeSDR Mini | 10 MHz - 3.5 GHz | 30 MHz | USB 3.0 | ⚠️ Beta | Wideband scanning |
+| USRP B200 | 70 MHz - 6 GHz | 56 MHz | USB 3.0 | ⚠️ Beta | High-performance |
+| Airspy R2 | 24 MHz - 1.7 GHz | 10 MHz | USB 2.0 | ⚠️ Beta | Low noise floor |
 
-### 3. Edge Deployment (Remote Locations)
-- Suitable for: Raspberry Pi, embedded systems
-- Components: Lightweight deployment on edge devices
-- Hardware Requirements: Raspberry Pi 4/5, 4GB+ RAM, 64GB+ storage
+### Antennas
 
-### 4. Cloud/Hybrid Deployment
-- Suitable for: Multi-site monitoring, cloud analytics
-- Components: Edge nodes + cloud backend
-- Hardware Requirements: Cloud VMs + edge devices
+| Antenna Type | Frequency | Gain | Pattern | Best For |
+|--------------|-----------|------|---------|----------|
+| Discone | 100 MHz - 3 GHz | 2-5 dBi | Omnidirectional | General purpose |
+| Log-periodic | 400 MHz - 6 GHz | 6-10 dBi | Directional | Specific bands |
+| Patch | 2.4 GHz | 5-8 dBi | Directional | 2.4GHz only |
+| Yagi | 2.4/5.8 GHz | 10-15 dBi | Highly directional | Long range |
+| Biconical | 70 MHz - 6 GHz | 0-3 dBi | Wide omni | Wideband scanning |
+| Spiral | 400 MHz - 6 GHz | 3-5 dBi | Circular | Multi-polarization |
+
+### Accessories
+
+| Accessory | Purpose | Recommended |
+|-----------|---------|-------------|
+| LNA (Low Noise Amplifier) | Boost weak signals | Required for long range |
+| Bandpass Filter | Reduce interference | Recommended for urban areas |
+| USB Isolator | Ground loop prevention | Recommended for field use |
+| RF Shield | Reduce EMI | Optional |
+| GPS Dongle | Time synchronization | Required for TDOA |
+| Cooling Fan | Prevent overheating | Required for continuous operation |
 
 ---
 
-## Prerequisites
+## Quick Start
 
-### System Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| CPU | 4 cores | 8+ cores |
-| RAM | 8 GB | 16+ GB |
-| Storage | 100 GB | 500+ GB (SSD) |
-| Network | 1 Gbps | 10 Gbps |
-| OS | Ubuntu 22.04 | Ubuntu 24.04 LTS |
-
-### Software Requirements
+### Minimal Hardware Setup
 
 ```bash
-# Required software
-- Docker 24.0+ / Podman 4.0+
-- Docker Compose 2.20+
-- Python 3.11+
-- PostgreSQL 16+
-- Redis 7.2+
-- MinIO (optional)
-- NVIDIA Drivers (for GPU support)
+# 1. Connect SDR to USB port
+# 2. Attach antenna to SMA connector
+# 3. Install drivers (Ubuntu/Debian)
+sudo apt update
+sudo apt install -y hackrf rtl-sdr
 
-# Development tools (optional)
-- Git 2.40+
-- Make 4.0+
-- curl/wget
-- jq
-SDR Hardware Support
-SDR	Driver	USB	Bandwidth
-HackRF One	hackrf	USB 3.0	20 MHz
-RTL-SDR	rtl-sdr	USB 2.0	2.4 MHz
-ADALM-PLUTO	libiio	USB 2.0	20 MHz
-LimeSDR	limesuite	USB 3.0	30 MHz
-USRP B200	UHD	USB 3.0	56 MHz
-Quick Deployment
-One-Command Deployment
+# 4. Test SDR detection
+hackrf_info
+# or
+rtl_test -t
+
+# 5. Verify with software
+sudo rtl_power -f 2400M:2500M:1M -g 20 -i 10 | grep -v "^#"
+Hardware Connection Diagram
+text
+┌─────────────────────────────────────────────────────────────────┐
+│                     Drone Detector Hardware Setup               │
+│                                                                  │
+│  ┌──────────┐      ┌──────────┐      ┌──────────┐             │
+│  │ Antenna  │─────▶│   LNA    │─────▶│  Filter  │             │
+│  └──────────┘      │  (opt)   │      │  (opt)   │             │
+│                    └──────────┘      └────┬─────┘             │
+│                                           │                      │
+│                                           ▼                      │
+│                    ┌──────────┐      ┌──────────┐             │
+│                    │   SDR    │◀─────│   USB    │             │
+│                    │  Device  │      │ Isolator │             │
+│                    └────┬─────┘      └──────────┘             │
+│                         │                                        │
+│                         ▼                                        │
+│                    ┌──────────┐                                 │
+│                    │ Computer │                                 │
+│                    │   USB    │                                 │
+│                    └──────────┘                                 │
+│                                                                  │
+│  Optional:                                                        │
+│  ┌──────────┐      ┌──────────┐                                 │
+│  │   GPS    │─────▶│  Time    │                                 │
+│  │  Dongle  │      │  Sync    │                                 │
+│  └──────────┘      └──────────┘                                 │
+└─────────────────────────────────────────────────────────────────┘
+Device-Specific Installation
+HackRF One Installation
+Driver Installation
 bash
-# Clone repository
-git clone https://github.com/drone-detector/drone-detector.git
-cd drone-detector
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y hackrf libhackrf-dev hackrf-tools
 
-# Quick start with default config
-make deploy-quick
+# Install from source (latest version)
+git clone https://github.com/greatscottgadgets/hackrf.git
+cd hackrf/host
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+make -j4
+sudo make install
+sudo ldconfig
 
-# Or use docker-compose directly
-docker-compose up -d
-Verify Deployment
+# Install Python bindings
+pip install pyhackrf
+Firmware Update
 bash
-# Check health
-curl http://localhost:8888/health
+# Check current firmware
+hackrf_info | grep "Firmware Version"
 
-# Should return:
-# {"status": "healthy", "version": "1.0.0"}
+# Download latest firmware
+wget https://github.com/greatscottgadgets/hackrf/releases/latest/download/hackrf-linux.tar.xz
+tar xf hackrf-linux.tar.xz
 
-# Access web interface
-open http://localhost:8888
+# Update firmware
+cd hackrf-*/firmware/bin
+hackrf_spiflash -w hackrf_one_usb.bin
 
-# View logs
-docker-compose logs -f
-Docker Compose Deployment
-Production Deployment
+# Verify update
+hackrf_info
+Calibration
 bash
-# 1. Clone repository
-git clone https://github.com/drone-detector/drone-detector.git
-cd drone-detector
+# Frequency calibration (using known reference)
+hackrf_cal -c 10000000  # Crystal frequency adjustment
+hackrf_cal -f 1000000000 -g 16  # Frequency calibration at 1GHz
 
-# 2. Create environment file
-cp .env.example .env
-# Edit .env with your configuration
+# Store calibration values
+hackrf_cal -s  # Save to device
 
-# 3. Create data directories
-mkdir -p /mnt/drone-data/{postgres,redis,minio,app,models}
-chown -R 999:999 /mnt/drone-data/postgres
-chown -R 1000:1000 /mnt/drone-data/redis
-
-# 4. Deploy with production config
-docker-compose -f docker-compose.prod.yml up -d
-
-# 5. Scale services (optional)
-docker-compose -f docker-compose.prod.yml up -d --scale api=3 --scale worker=5
-
-# 6. Check status
-docker-compose -f docker-compose.prod.yml ps
-docker-compose -f docker-compose.prod.yml logs --tail=50
-Development Deployment
+# Verify calibration
+hackrf_sweep -f 1000:2000 -n 1
+Performance Optimization
 bash
-# Development with hot-reload
-docker-compose -f docker-compose.dev.yml up
+# Set USB buffer size
+echo 0 > /sys/module/usbcore/parameters/usbfs_memory_mb
 
-# With data science tools
-docker-compose -f docker-compose.dev.yml --profile data-science up
+# Increase USB transfer size for HackRF
+hackrf_transfer -t /dev/null -s 20000000 -b 1000000
 
-# With SDR simulator
-docker-compose -f docker-compose.dev.yml --profile sdr-sim up
-Custom Configuration
-yaml
-# docker-compose.override.yml
-version: '3.8'
-services:
-  api:
-    environment:
-      LOG_LEVEL: DEBUG
-      GUNICORN_WORKERS: 2
-    volumes:
-      - ./custom_config:/app/config:ro
-Kubernetes Deployment
-Prerequisites
-bash
-# Install kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
-
-# Install helm
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-# Create namespace
-kubectl create namespace drone-detector
-Helm Chart Deployment
-bash
-# Add repository
-helm repo add drone-detector https://charts.drone-detector.com
-helm repo update
-
-# Install with custom values
-cat > values.yaml << EOF
-replicaCount: 3
-
-image:
-  repository: drone-detector/api
-  tag: latest
-  pullPolicy: IfNotPresent
-
-service:
-  type: LoadBalancer
-  port: 8888
-
-resources:
-  requests:
-    memory: "512Mi"
-    cpu: "500m"
-  limits:
-    memory: "2Gi"
-    cpu: "2000m"
-
-postgresql:
-  enabled: true
-  postgresqlPassword: "secure_password"
-  persistence:
-    size: 100Gi
-
-redis:
-  enabled: true
-  password: "redis_password"
-
-minio:
-  enabled: true
-  rootUser: "minioadmin"
-  rootPassword: "minioadmin123"
-
-ingress:
-  enabled: true
-  hostname: drone.detector.local
-  tls: true
-EOF
-
-# Deploy
-helm install drone-detector drone-detector/drone-detector -f values.yaml -n drone-detector
-
-# Check deployment
-kubectl get pods -n drone-detector
-kubectl get svc -n drone-detector
-Manual Kubernetes Manifest Deployment
-yaml
-# deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: drone-detector-api
-  namespace: drone-detector
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: drone-detector
-      tier: api
-  template:
-    metadata:
-      labels:
-        app: drone-detector
-        tier: api
-    spec:
-      containers:
-      - name: api
-        image: drone-detector/api:latest
-        ports:
-        - containerPort: 8888
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: db-secret
-              key: url
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: redis-secret
-              key: url
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "2000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8888
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8888
-          initialDelaySeconds: 5
-          periodSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: drone-detector-api
-  namespace: drone-detector
-spec:
-  selector:
-    app: drone-detector
-    tier: api
-  ports:
-  - port: 8888
-    targetPort: 8888
-  type: LoadBalancer
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: db-secret
-  namespace: drone-detector
-type: Opaque
-stringData:
-  url: postgresql://user:password@postgres:5432/drone_detector
-bash
-# Apply manifests
-kubectl apply -f deployment.yaml
-kubectl apply -f service.yaml
-kubectl apply -f configmap.yaml
-kubectl apply -f secret.yaml
-
-# Monitor deployment
-kubectl rollout status deployment/drone-detector-api
-kubectl get pods -w
-Bare-Metal Installation
-Ubuntu/Debian Installation
-bash
-#!/bin/bash
-# install.sh - Bare-metal installation script
-
-set -e
-
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install system dependencies
-sudo apt install -y \
-    python3.11 python3-pip python3-venv \
-    postgresql postgresql-contrib \
-    redis-server \
-    nginx \
-    git \
-    build-essential \
-    libfftw3-dev \
-    libhackrf-dev \
-    librtlsdr-dev \
-    libusb-1.0-0-dev
-
-# Create application user
-sudo useradd -m -s /bin/bash drone
-sudo usermod -aG plugdev drone
-
-# Setup PostgreSQL
-sudo -u postgres psql << EOF
-CREATE DATABASE drone_detector;
-CREATE USER drone_user WITH PASSWORD 'secure_password';
-GRANT ALL PRIVILEGES ON DATABASE drone_detector TO drone_user;
-EOF
-
-# Setup Redis
-sudo systemctl enable redis-server
-sudo systemctl start redis-server
-
-# Clone application
-sudo mkdir -p /opt/drone-detector
-sudo chown drone:drone /opt/drone-detector
-sudo -u drone git clone https://github.com/drone-detector/drone-detector.git /opt/drone-detector
-
-# Setup Python virtual environment
-cd /opt/drone-detector
-sudo -u drone python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Configure application
-cp .env.example .env
-# Edit .env with database credentials
-
-# Setup systemd services
-sudo cp systemd/drone-api.service /etc/systemd/system/
-sudo cp systemd/drone-worker.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable drone-api drone-worker
-sudo systemctl start drone-api drone-worker
-
-# Configure Nginx
-sudo cp nginx/drone-detector.conf /etc/nginx/sites-available/
-sudo ln -s /etc/nginx/sites-available/drone-detector.conf /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-Systemd Service Files
-ini
-# /etc/systemd/system/drone-api.service
-[Unit]
-Description=Drone Detector API Service
-After=network.target postgresql.service redis.service
-Wants=postgresql.service redis.service
-
-[Service]
-Type=simple
-User=drone
-Group=drone
-WorkingDirectory=/opt/drone-detector
-Environment="PATH=/opt/drone-detector/venv/bin"
-EnvironmentFile=/opt/drone-detector/.env
-ExecStart=/opt/drone-detector/venv/bin/gunicorn api.main:app \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --workers 4 \
-    --bind 0.0.0.0:8888
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-ini
-# /etc/systemd/system/drone-worker.service
-[Unit]
-Description=Drone Detector Worker Service
-After=network.target postgresql.service redis.service
-
-[Service]
-Type=simple
-User=drone
-Group=drone
-WorkingDirectory=/opt/drone-detector
-Environment="PATH=/opt/drone-detector/venv/bin"
-EnvironmentFile=/opt/drone-detector/.env
-ExecStart=/opt/drone-detector/venv/bin/python app/workers/worker.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-Nginx Configuration
-nginx
-# /etc/nginx/sites-available/drone-detector.conf
-upstream drone_api {
-    server 127.0.0.1:8888;
-}
-
-upstream drone_websocket {
-    server 127.0.0.1:8889;
-}
-
-server {
-    listen 80;
-    server_name drone.detector.local;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name drone.detector.local;
-
-    ssl_certificate /etc/ssl/certs/drone-detector.crt;
-    ssl_certificate_key /etc/ssl/private/drone-detector.key;
-
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    # API
-    location /api/ {
-        proxy_pass http://drone_api;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # WebSocket
-    location /ws/ {
-        proxy_pass http://drone_websocket;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # Static files
-    location /static/ {
-        alias /opt/drone-detector/ui/;
-        expires 30d;
-    }
-
-    # Health check
-    location /health {
-        proxy_pass http://drone_api/health;
-        access_log off;
-    }
-}
-Edge Deployment (Raspberry Pi)
-Raspberry Pi 4/5 Setup
-bash
-#!/bin/bash
-# deploy_edge.sh - Raspberry Pi deployment
-
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install dependencies
-sudo apt install -y \
-    python3-pip \
-    libhackrf-dev \
-    librtlsdr-dev \
-    libfftw3-dev \
-    nginx
-
-# Enable USB auto-mount for SDR
-sudo apt install -y usbmount
-
-# Setup optimized kernel
-echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
-echo "dtoverlay=pi3-miniuart-bt" | sudo tee -a /boot/config.txt
-
-# Set CPU governor to performance
-echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
-
-# Create swap file (for memory-constrained devices)
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-
-# Setup lightweight deployment
-cd /opt
-sudo git clone https://github.com/drone-detector/drone-detector.git
-cd drone-detector
-
-# Use edge-optimized configuration
-cp config/edge.yaml config/system.yaml
-
-# Install Python lightweight dependencies
-pip3 install --no-cache-dir -r requirements-edge.txt
-
-# Setup auto-start on boot
-cat << EOF | sudo tee /etc/rc.local
-#!/bin/bash
-cd /opt/drone-detector
-sudo -u pi python3 run.py --mode edge &
-exit 0
-EOF
-
-sudo chmod +x /etc/rc.local
-
-# Reboot
-sudo reboot
-Edge Optimized Configuration
-yaml
-# config/edge.yaml
-system:
-  mode: edge
-  log_level: INFO
-  
-hardware:
-  type: auto
-  sample_rate: 1000000  # Reduced for edge
-  gain: 20
-  
-detection:
-  enabled: true
-  threshold: 15  # Higher threshold for edge
-  update_interval: 500  # ms
-  
-processing:
-  fft_size: 512  # Smaller FFT for edge
-  peak_detection: true
-  ml_inference: false  # Disable ML on edge
-  feature_extraction: true
-  
-storage:
-  local_storage: true
-  upload_to_cloud: true
-  cloud_endpoint: "https://api.drone-detector.com"
-  retention_days: 7
-  
-network:
-  batch_size: 100
-  upload_interval: 60  # seconds
-  compression: true
-Cloud Deployment (AWS/GCP/Azure)
-AWS Deployment with Terraform
-hcl
-# main.tf
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-west-2"
-}
-
-# VPC
-resource "aws_vpc" "drone_detector" {
-  cidr_block = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support = true
-  
-  tags = {
-    Name = "drone-detector-vpc"
-  }
-}
-
-# ECS Cluster
-resource "aws_ecs_cluster" "drone_detector" {
-  name = "drone-detector-cluster"
-}
-
-# RDS PostgreSQL
-resource "aws_db_instance" "postgres" {
-  identifier = "drone-detector-db"
-  engine = "postgres"
-  engine_version = "16.3"
-  instance_class = "db.t3.large"
-  allocated_storage = 100
-  storage_encrypted = true
-  db_name = "drone_detector"
-  username = "drone_user"
-  password = random_password.db_password.result
-  backup_retention_period = 30
-  backup_window = "03:00-04:00"
-  maintenance_window = "Mon:04:00-Mon:05:00"
-  skip_final_snapshot = false
-  final_snapshot_identifier = "drone-detector-final-snapshot"
-  
-  tags = {
-    Name = "drone-detector-db"
-  }
-}
-
-# ElastiCache Redis
-resource "aws_elasticache_cluster" "redis" {
-  cluster_id = "drone-detector-redis"
-  engine = "redis"
-  node_type = "cache.t3.micro"
-  num_cache_nodes = 1
-  parameter_group_name = "default.redis7"
-  port = 6379
-  
-  tags = {
-    Name = "drone-detector-redis"
-  }
-}
-
-# S3 Bucket for IQ Recordings
-resource "aws_s3_bucket" "iq_storage" {
-  bucket = "drone-detector-iq-${random_id.bucket_suffix.hex}"
-  
-  lifecycle_rule {
-    enabled = true
-    transition {
-      days = 30
-      storage_class = "STANDARD_IA"
-    }
-    transition {
-      days = 90
-      storage_class = "GLACIER"
-    }
-    expiration {
-      days = 365
-    }
-  }
-}
-
-# ECR Repository
-resource "aws_ecr_repository" "drone_detector" {
-  name = "drone-detector"
-  image_tag_mutability = "MUTABLE"
-  
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-}
-
-# ECS Task Definition
-resource "aws_ecs_task_definition" "api" {
-  family = "drone-detector-api"
-  network_mode = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu = "1024"
-  memory = "2048"
-  execution_role_arn = aws_iam_role.ecs_execution.arn
-  task_role_arn = aws_iam_role.ecs_task.arn
-  
-  container_definitions = jsonencode([
-    {
-      name = "drone-detector-api"
-      image = "${aws_ecr_repository.drone_detector.repository_url}:latest"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 8888
-          protocol = "tcp"
-        }
-      ]
-      environment = [
-        {
-          name = "ENVIRONMENT"
-          value = "production"
-        },
-        {
-          name = "DATABASE_URL"
-          value = "postgresql://drone_user:${random_password.db_password.result}@${aws_db_instance.postgres.address}:5432/drone_detector"
-        },
-        {
-          name = "REDIS_URL"
-          value = "redis://${aws_elasticache_cluster.redis.cache_nodes[0].address}:6379"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group" = "/ecs/drone-detector"
-          "awslogs-region" = "us-west-2"
-          "awslogs-stream-prefix" = "api"
-        }
-      }
-    }
-  ])
-}
-
-# Auto-scaling
-resource "aws_appautoscaling_target" "api" {
-  max_capacity = 10
-  min_capacity = 2
-  resource_id = "service/${aws_ecs_cluster.drone_detector.name}/${aws_ecs_service.api.name}"
-  scalable_dimension = "ecs:service:DesiredCount"
-  service_namespace = "ecs"
-}
-
-resource "aws_appautoscaling_policy" "api_cpu" {
-  name = "api-cpu-autoscaling"
-  policy_type = "TargetTrackingScaling"
-  resource_id = aws_appautoscaling_target.api.resource_id
-  scalable_dimension = aws_appautoscaling_target.api.scalable_dimension
-  service_namespace = aws_appautoscaling_target.api.service_namespace
-  
-  target_tracking_scaling_policy_configuration {
-    predefined_metric_specification {
-      predefined_metric_type = "ECSServiceAverageCPUUtilization"
-    }
-    target_value = 70.0
-    scale_in_cooldown = 300
-    scale_out_cooldown = 60
-  }
-}
-bash
-# Deploy to AWS
-cd terraform
-terraform init
-terraform plan
-terraform apply -auto-approve
-
-# Build and push Docker image
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <account>.dkr.ecr.us-west-2.amazonaws.com
-docker build -t drone-detector:latest .
-docker tag drone-detector:latest <account>.dkr.ecr.us-west-2.amazonaws.com/drone-detector:latest
-docker push <account>.dkr.ecr.us-west-2.amazonaws.com/drone-detector:latest
-
-# Update ECS service
-aws ecs update-service --cluster drone-detector-cluster --service drone-detector-api --force-new-deployment
-GCP Deployment
-bash
-# Setup Google Cloud SDK
-gcloud init
-gcloud config set project drone-detector-project
-
-# Enable required APIs
-gcloud services enable compute.googleapis.com
-gcloud services enable container.googleapis.com
-gcloud services enable sqladmin.googleapis.com
-gcloud services enable redis.googleapis.com
-
-# Create GKE cluster
-gcloud container clusters create drone-detector-cluster \
-    --zone us-central1-a \
-    --num-nodes 3 \
-    --machine-type n2-standard-4
-
-# Create Cloud SQL PostgreSQL
-gcloud sql instances create drone-detector-db \
-    --database-version POSTGRES_16 \
-    --tier db-custom-2-8192 \
-    --region us-central1 \
-    --storage-type SSD \
-    --storage-size 100GB \
-    --backup-start-time 03:00
-
-# Create Memorystore Redis
-gcloud redis instances create drone-detector-redis \
-    --size=5 \
-    --region=us-central1 \
-    --zone=us-central1-a \
-    --redis-version=redis_7_2
-
-# Deploy to GKE
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-
-# Setup Cloud Run (serverless option)
-gcloud run deploy drone-detector-api \
-    --image gcr.io/drone-detector-project/drone-detector:latest \
-    --platform managed \
-    --region us-central1 \
-    --memory 2Gi \
-    --cpu 2 \
-    --min-instances 2 \
-    --max-instances 10 \
-    --concurrency 80
-High Availability Configuration
-Load Balancing
-yaml
-# haproxy.cfg
-global
-    daemon
-    maxconn 4096
-    log /dev/log local0
-
-defaults
-    mode http
-    timeout connect 5s
-    timeout client 50s
-    timeout server 50s
-    log global
-
-frontend http_front
-    bind *:80
-    bind *:443 ssl crt /etc/ssl/certs/drone-detector.pem
-    redirect scheme https code 301 if !{ ssl_fc }
-    
-    acl api_path path_beg /api
-    acl ws_path path_beg /ws
-    
-    use_backend api_backend if api_path
-    use_backend ws_backend if ws_path
-    
-    default_backend web_backend
-
-backend api_backend
-    balance roundrobin
-    option httpchk GET /health
-    server api1 10.0.0.1:8888 check inter 5s rise 2 fall 3
-    server api2 10.0.0.2:8888 check inter 5s rise 2 fall 3
-    server api3 10.0.0.3:8888 check inter 5s rise 2 fall 3 backup
-
-backend ws_backend
-    balance leastconn
-    option httpchk GET /health
-    server ws1 10.0.0.1:8889 check inter 5s rise 2 fall 3
-    server ws2 10.0.0.2:8889 check inter 5s rise 2 fall 3
-    server ws3 10.0.0.3:8889 check inter 5s rise 2 fall 3
-
-backend web_backend
-    balance roundrobin
-    server web1 10.0.0.1:80 check
-    server web2 10.0.0.2:80 check
-Database Replication
-sql
--- Setup PostgreSQL streaming replication
--- Primary server (postgresql.conf)
-wal_level = replica
-max_wal_senders = 10
-wal_keep_segments = 64
-hot_standby = on
-
--- Replica server (recovery.conf)
-primary_conninfo = 'host=primary host=10.0.0.1 port=5432 user=replica password=replica'
-trigger_file = '/tmp/promote_to_primary'
-
--- Create replication user
-CREATE USER replica WITH REPLICATION ENCRYPTED PASSWORD 'replica_password';
-GRANT CONNECT ON DATABASE drone_detector TO replica;
-Redis Sentinel for High Availability
-yaml
-# docker-compose.sentinel.yml
-version: '3.8'
-services:
-  redis-master:
-    image: redis:7.2-alpine
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
-    
-  redis-replica-1:
-    image: redis:7.2-alpine
-    command: redis-server --slaveof redis-master 6379 --requirepass ${REDIS_PASSWORD}
-    
-  redis-replica-2:
-    image: redis:7.2-alpine
-    command: redis-server --slaveof redis-master 6379 --requirepass ${REDIS_PASSWORD}
-    
-  redis-sentinel-1:
-    image: redis:7.2-alpine
-    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
-    volumes:
-      - ./sentinel.conf:/usr/local/etc/redis/sentinel.conf
-      
-  redis-sentinel-2:
-    image: redis:7.2-alpine
-    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
-    volumes:
-      - ./sentinel.conf:/usr/local/etc/redis/sentinel.conf
-Monitoring & Logging
-Prometheus Configuration
-yaml
-# prometheus.yml
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ['alertmanager:9093']
-
-rule_files:
-  - "alerts.yml"
-
-scrape_configs:
-  - job_name: 'drone-detector'
-    static_configs:
-      - targets: ['api:8888', 'worker:8888']
-    metrics_path: '/metrics'
-    
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres-exporter:9187']
-      
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis-exporter:9121']
-      
-  - job_name: 'node'
-    static_configs:
-      - targets: ['node-exporter:9100']
-Grafana Dashboards
-json
-{
-  "dashboard": {
-    "title": "Drone Detector Monitoring",
-    "panels": [
-      {
-        "title": "Detection Rate",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(drone_detections_total[5m])",
-            "legendFormat": "detections/sec"
-          }
-        ]
-      },
-      {
-        "title": "Detection Latency",
-        "type": "heatmap",
-        "targets": [
-          {
-            "expr": "drone_detection_latency_ms",
-            "format": "heatmap"
-          }
-        ]
-      },
-      {
-        "title": "System Resources",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "node_cpu_seconds_total{mode='user'}",
-            "legendFormat": "CPU usage"
-          },
-          {
-            "expr": "node_memory_MemTotal_bytes - node_memory_MemFree_bytes",
-            "legendFormat": "Memory usage"
-          }
-        ]
-      }
-    ]
-  }
-}
-Log Aggregation with Loki
-yaml
-# loki-config.yaml
-auth_enabled: false
-
-server:
-  http_listen_port: 3100
-
-ingester:
-  lifecycler:
-    ring:
-      kvstore:
-        store: inmemory
-      replication_factor: 1
-  chunk_idle_period: 5m
-  chunk_retain_period: 30s
-
-schema_config:
-  configs:
-    - from: 2024-01-01
-      store: boltdb-shipper
-      object_store: filesystem
-      schema: v11
-      index:
-        prefix: index_
-        period: 24h
-
-storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/index
-    cache_location: /loki/index_cache
-    shared_store: filesystem
-  filesystem:
-    directory: /loki/chunks
-
-limits_config:
-  enforce_metric_name: false
-  reject_old_samples: true
-  reject_old_samples_max_age: 168h
-
-chunk_store_config:
-  max_look_back_period: 0s
-
-table_manager:
-  retention_deletes_enabled: true
-  retention_period: 720h
-Security Hardening
-TLS/SSL Configuration
-bash
-# Generate SSL certificates
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/ssl/private/drone-detector.key \
-    -out /etc/ssl/certs/drone-detector.crt \
-    -subj "/CN=drone.detector.local"
-
-# Generate stronger DH parameters
-openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-Security Headers
-nginx
-# Security headers configuration
-add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-add_header X-Frame-Options "DENY" always;
-add_header X-Content-Type-Options "nosniff" always;
-add_header X-XSS-Protection "1; mode=block" always;
-add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" always;
-add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
-Fail2Ban Configuration
-ini
-# /etc/fail2ban/jail.local
-[drone-detector]
-enabled = true
-port = http,https
-filter = drone-detector
-logpath = /var/log/drone-detector/api.log
-maxretry = 5
-bantime = 3600
-findtime = 600
-ini
-# /etc/fail2ban/filter.d/drone-detector.conf
-[Definition]
-failregex = ^.*Failed login attempt from <HOST>.*$
-            ^.*Invalid API key from <HOST>.*$
-            ^.*Brute force detected from <HOST>.*$
-ignoreregex =
-Security Scanning
-bash
-# Run security scans
-docker scan drone-detector:latest
-trivy image drone-detector:latest
-grype drone-detector:latest
-
-# Check for secrets
-git secrets --scan
-trufflehog --regex --entropy=True .
-
-# Compliance scanning
-kube-bench run --targets master,node
-Backup & Recovery
-Automated Backup Script
-bash
-#!/bin/bash
-# backup.sh - Automated backup script
-
-BACKUP_DIR="/backups/drone-detector"
-DATE=$(date +%Y%m%d_%H%M%S)
-RETENTION_DAYS=30
-
-# Create backup directory
-mkdir -p $BACKUP_DIR/{database,config,recordings,models}
-
-# Backup PostgreSQL
-PGPASSWORD=$DB_PASSWORD pg_dump -h $DB_HOST -U $DB_USER $DB_NAME \
-    | gzip > $BACKUP_DIR/database/drone_db_$DATE.sql.gz
-
-# Backup Redis
-redis-cli -a $REDIS_PASSWORD --rdb $BACKUP_DIR/redis/dump_$DATE.rdb
-
-# Backup MinIO/S3 recordings
-aws s3 sync s3://drone-recordings $BACKUP_DIR/recordings/
-
-# Backup configuration
-tar czf $BACKUP_DIR/config/config_$DATE.tar.gz /opt/drone-detector/config/
-
-# Backup ML models
-tar czf $BACKUP_DIR/models/models_$DATE.tar.gz /opt/drone-detector/models/
-
-# Clean old backups
-find $BACKUP_DIR -type f -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete
-find $BACKUP_DIR -type f -name "*.rdb" -mtime +$RETENTION_DAYS -delete
-find $BACKUP_DIR -type f -name "*.tar.gz" -mtime +$RETENTION_DAYS -delete
-
-# Upload to cloud (optional)
-aws s3 sync $BACKUP_DIR s3://drone-backups/
-
-echo "Backup completed: $DATE"
-Recovery Procedure
-bash
-#!/bin/bash
-# restore.sh - Recovery script
-
-# 1. Restore PostgreSQL
-gunzip -c $BACKUP_DIR/database/drone_db_$DATE.sql.gz | \
-    PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER $DB_NAME
-
-# 2. Restore Redis
-systemctl stop redis
-cp $BACKUP_DIR/redis/dump_$DATE.rdb /var/lib/redis/dump.rdb
-systemctl start redis
-
-# 3. Restore configuration
-tar xzf $BACKUP_DIR/config/config_$DATE.tar.gz -C /
-
-# 4. Restart services
-systemctl restart drone-api drone-worker
-
-echo "Restore completed from: $DATE"
-Troubleshooting
-Common Issues
-bash
-# Issue: SDR not detected
-lsusb | grep -i hackrf
+# Optimize driver parameters
 sudo modprobe hackrf
-sudo hackrf_info
+sudo sh -c 'echo -1 > /sys/module/hackrf/parameters/fifo_timeout_us'
+RTL-SDR Installation
+Driver Installation
+bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y rtl-sdr librtlsdr-dev
 
-# Issue: Database connection failed
-sudo systemctl status postgresql
-netstat -tulpn | grep 5432
-tail -f /var/log/postgresql/postgresql.log
+# Install from source (with better performance)
+git clone https://github.com/osmocom/rtl-sdr.git
+cd rtl-sdr
+mkdir build && cd build
+cmake .. -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON
+make -j4
+sudo make install
+sudo ldconfig
 
-# Issue: High memory usage
-free -h
-top -o %MEM
-docker stats
+# Install Python bindings
+pip install pyrtlsdr
 
-# Issue: API not responding
-curl -v http://localhost:8888/health
-sudo netstat -tulpn | grep 8888
-tail -f /var/log/drone-detector/api.log
+# Blacklist default DVB-T driver
+sudo tee /etc/modprobe.d/rtl-sdr-blacklist.conf << EOF
+blacklist dvb_usb_rtl28xxu
+blacklist rtl2832
+blacklist rtl2830
+EOF
 
-# Issue: WebSocket disconnects
-# Increase timeout in nginx
-proxy_read_timeout 3600s;
-proxy_send_timeout 3600s;
+sudo reboot
+Device Testing
+bash
+# Basic test - should see samples
+rtl_test -t
 
-# Issue: Permission denied for SDR
-sudo usermod -a -G plugdev $USER
-sudo chmod 666 /dev/bus/usb/*/*
+# Gain testing
+rtl_test -g 0
+rtl_test -g 20
+rtl_test -g 40
+
+# Frequency stability test
+rtl_test -p
+
+# SNR test at different frequencies
+rtl_power -f 2400M:2500M:1M -g 20 -i 10 -1 -c 50% spectrum.csv
+Frequency Correction (PPM)
+bash
+# Find PPM offset using known reference (e.g., GSM cell tower)
+rtl_test -p
+
+# Apply correction (example: 1.5 PPM)
+rtl_sdr -f 100000000 -p 1.5 test.raw
+
+# Permanent correction in config
+echo "rtl_sdr_ppm=1.5" >> ~/.config/drone-detector/hardware.yaml
+ADALM-PLUTO Installation
+Driver Installation
+bash
+# Install libiio and dependencies
+sudo apt update
+sudo apt install -y libiio-utils libiio-dev libad9361-dev
+
+# Install Pluto firmware
+wget https://github.com/analogdevicesinc/plutosdr-fw/releases/latest/download/plutosdr-fw-latest.zip
+unzip plutosdr-fw-latest.zip
+
+# Update firmware
+pluto_fw_update.py plutosdr-fw-latest/pluto.frm
+
+# Verify connection
+iio_info -s
+Network Configuration
+bash
+# Default Pluto IP: 192.168.2.1
+# Configure computer network interface
+sudo ip addr add 192.168.2.10/24 dev eth0
+sudo ip link set eth0 up
+
+# Or use USB network mode
+modprobe g_serial
+modprobe g_ether
+
+# Test connection
+ping 192.168.2.1
+iio_info -u ip:192.168.2.1
 Performance Tuning
+bash
+# Increase buffer size
+echo 4096 > /sys/bus/iio/devices/iio:device0/buffer/length
+
+# Set higher sample rate
+iio_attr -u ip:192.168.2.1 -c ad9361-phy voltage0 sampling_frequency 20000000
+
+# Enable high-performance mode
+iio_attr -u ip:192.168.2.1 -d ad9361-phy tx_path_rates rf_bandwidth 20000000
+Antenna Setup
+Antenna Selection Guide
 yaml
-# PostgreSQL tuning (postgresql.conf)
-shared_buffers = '4GB'
-effective_cache_size = '12GB'
-maintenance_work_mem = '1GB'
-work_mem = '50MB'
-max_connections = 200
-random_page_cost = 1.1
+# Recommended antenna configurations by scenario
 
-# Redis tuning (redis.conf)
-maxmemory 4gb
-maxmemory-policy allkeys-lru
-save 900 1
-save 300 10
-save 60 10000
+Scenario: "Urban 2.4GHz monitoring"
+  primary: "Patch 2.4GHz"
+  secondary: "Discone"
+  accessories:
+    - "2.4GHz bandpass filter"
+    - "LNA 15dB gain"
 
-# System tuning (sysctl.conf)
-net.core.somaxconn = 65535
-vm.swappiness = 10
-vm.dirty_ratio = 15
-vm.dirty_background_ratio = 5
-Upgrade Procedures
-Rolling Upgrade
+Scenario: "Suburban multi-band"
+  primary: "Log-periodic 400MHz-6GHz"
+  secondary: "Biconical"
+  accessories:
+    - "LNA 20dB gain"
+    - "FM broadcast filter"
+
+Scenario: "Rural long range"
+  primary: "Yagi 2.4GHz 15dBi"
+  secondary: "Yagi 5.8GHz 15dBi"
+  accessories:
+    - "High-gain LNA 30dB"
+    - "Low-loss coax"
+    - "Elevation mount"
+
+Scenario: "Mobile/DJI tracking"
+  primary: "Biconical wideband"
+  accessories:
+    - "GPS for position"
+    - "Magnetic mount"
+    - "12V DC power"
+Antenna Placement
+text
+┌─────────────────────────────────────────────────────────────┐
+│                   Antenna Placement Guide                   │
+│                                                              │
+│  Best:                                                      │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  Rooftop mount, clear line of sight                │    │
+│  │  Above surrounding structures                       │    │
+│  │  Minimum 1m from metal objects                     │    │
+│  │  Ground plane (if required by antenna)             │    │
+│  └────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Acceptable:                                                │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  Window mount, as high as possible                 │    │
+│  │  Away from metal window frames                     │    │
+│  │  Exterior wall mount                               │    │
+│  └────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Avoid:                                                     │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │  Near electronic devices (computers, routers)      │    │
+│  │  Inside metal enclosures/equipment racks           │    │
+│  │  Near large metal surfaces                         │    │
+│  │  Underground or basement                          │    │
+│  └────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+Coaxial Cable Selection
+Cable Type	Loss at 2.4GHz (per 10m)	Use Case
+RG-58	-15 dB	Short runs (<5m)
+LMR-240	-8 dB	Medium runs (5-15m)
+LMR-400	-4 dB	Long runs (15-30m)
+LMR-600	-2.5 dB	Very long (>30m)
 bash
-# Docker Compose upgrade
-docker-compose pull
-docker-compose up -d --no-deps --scale api=0 api
-docker-compose up -d --no-deps --scale api=3 api
+# Calculate cable loss at 2.4GHz
+# LMR-400: ~0.4dB/m
+# 10m cable: -4dB loss
+# Required LNA gain = 4dB + (cable loss) + 10dB (margin)
 
-# Kubernetes rolling update
-kubectl set image deployment/drone-detector-api api=drone-detector:new-version
-kubectl rollout status deployment/drone-detector-api
+# Example cable calculation function
+cable_loss() {
+    local freq=$1  # 2.4e9
+    local length=$2  # meters
+    # LMR-400 loss formula (dB/m)
+    loss_db_per_m = 0.25 * sqrt(freq/1e9)
+    total_loss = loss_db_per_m * length
+}
+Multi-SDR Configuration
+TDOA (Time Difference of Arrival) Setup
+For drone localization using multiple receivers:
 
-# Database migrations
-python scripts/migrate.py upgrade head
-
-# Rollback if needed
-kubectl rollout undo deployment/drone-detector-api
-Version Compatibility
-Component	Version	Compatible With
-API	1.x	All 1.x clients
-Database Schema	v1.0	API 1.0+
-ML Models	v2	API 1.2+
-Config Files	v1	All versions
-Post-Deployment Checklist
-Services running and healthy
-
-Database migrations applied
-
-Hardware SDR detected
-
-SSL certificates valid
-
-Firewall rules configured
-
-Backups scheduled
-
-Monitoring alerts configured
-
-Log rotation enabled
-
-Security updates applied
-
-Load balancing tested
-
-Failover tested
-
-Documentation updated
-
-Support & Maintenance
-Health Check Endpoints
 bash
-# Check all services
-curl http://localhost:8888/health
+# Hardware requirements per node:
+# - GPS-disciplined oscillator (GPSDO)
+# - High stability reference clock
+# - Precision time synchronization
 
-# Check database
-curl http://localhost:8888/health/database
+# Synchronize multiple devices
+# Method 1: GPS PPS signal
+sudo apt install gpsd gpsd-clients
+sudo systemctl enable gpsd
 
-# Check hardware
-curl http://localhost:8888/health/hardware
+# Configure GPS sharing
+sudo tee /etc/default/gpsd << EOF
+START_DAEMON="true"
+USBAUTO="true"
+DEVICES="/dev/ttyACM0"
+GPSD_OPTIONS="-n"
+EOF
 
-# Check ML model
-curl http://localhost:8888/health/ml
-Maintenance Mode
+# Check synchronization
+gpsmon
+cgps -s
+Clock Distribution
+text
+┌─────────────────────────────────────────────────────────────────┐
+│                  Multi-SDR Clock Distribution                   │
+│                                                                  │
+│  Option 1: GPS Disciplined Oscillator (GPSDO)                   │
+│  ┌──────────┐      ┌──────────┐                               │
+│  │   GPS    │─────▶│  GPSDO   │─────▶ 10MHz out to all SDRs  │
+│  │ Antenna  │      │          │                               │
+│  └──────────┘      └────────────────────────────┬────────────┘│
+│                                                   │              │
+│                            ┌──────────────────────┼────────────┐│
+│                            │                      │            ││
+│                            ▼                      ▼            ││
+│                    ┌──────────┐            ┌──────────┐       ││
+│                    │  SDR #1  │            │  SDR #2  │       ││
+│                    │ 10MHz IN │            │ 10MHz IN │       ││
+│                    └──────────┘            └──────────┘       ││
+│                                                                 │
+│  Option 2: Network Time Protocol (NTP)                         │
+│  ┌──────────┐                                                    │
+│  │   GPS    │─────▶ PTP/NTP Server ─────▶ All computers       │
+│  │ Antenna  │                                                    │
+│  └──────────┘                                                    │
+│                                                                  │
+│  Option 3: Shared Reference Clock                              │
+│  ┌──────────┐      ┌──────────┐                               │
+│  │   OCXO   │─────▶│  Buffer  │─────▶ Distribution amp      │
+│  │ Reference│      │   Amp    │       to all SDRs            │
+│  └──────────┘      └──────────┘                               │
+└─────────────────────────────────────────────────────────────────┘
+Multi-SDR Configuration File
+yaml
+# config/multi_sdr.yaml
+hardware:
+  devices:
+    - id: "hackrf_1"
+      type: "hackrf"
+      serial: "HACKRF000001"
+      frequency: 2.45e9
+      sample_rate: 20e6
+      gain: 24
+      position:
+        latitude: 37.7749
+        longitude: -122.4194
+        altitude: 10.0
+      clock_source: "gpsdo"
+      time_source: "gps"
+      
+    - id: "hackrf_2"
+      type: "hackrf"
+      serial: "HACKRF000002"
+      frequency: 2.45e9
+      sample_rate: 20e6
+      gain: 24
+      position:
+        latitude: 37.7750
+        longitude: -122.4195
+        altitude: 10.0
+      clock_source: "gpsdo"
+      time_source: "gps"
+      
+    - id: "rtl_1"
+      type: "rtl_sdr"
+      index: 0
+      frequency: 2.45e9
+      sample_rate: 2.4e6
+      gain: 30
+      ppm: 1.5  # Frequency correction
+      bias_tee: true  # Enable for active antenna
+      
+  tdoa:
+    enabled: true
+    reference_device: "hackrf_1"
+    max_distance_m: 1000
+    update_rate: 10  # Hz
+    algorithm: "gcc_phat"  # Generalized cross-correlation
+    
+  synchronization:
+    method: "gps"
+    pps_enabled: true
+    max_timestamp_error_us: 100
+    calibration_interval: 3600  # seconds
+Signal Optimization
+Gain Settings Optimization
+python
+# gain_optimizer.py - Automatic gain optimization
+
+import numpy as np
+from rtlsdr import RtlSdr
+
+class GainOptimizer:
+    def __init__(self, device):
+        self.device = device
+        self.gain_range = range(0, 50, 5)  # 0 to 45dB in 5dB steps
+        
+    def measure_snr(self, frequency, gain):
+        """Measure SNR at specific gain setting"""
+        self.device.set_center_freq(frequency)
+        self.device.set_gain(gain)
+        
+        # Collect samples
+        samples = self.device.read_samples(100000)
+        
+        # Calculate signal power vs noise
+        signal_power = np.mean(np.abs(samples) ** 2)
+        
+        # Estimate noise floor (median of sorted powers)
+        power_sorted = np.sort(np.abs(samples) ** 2)
+        noise_power = np.median(power_sorted[:len(power_sorted)//2])
+        
+        snr = 10 * np.log10(signal_power / noise_power)
+        return snr
+    
+    def optimize_gain(self, frequency):
+        """Find optimal gain setting"""
+        snr_results = []
+        
+        for gain in self.gain_range:
+            snr = self.measure_snr(frequency, gain)
+            snr_results.append((gain, snr))
+            print(f"Gain: {gain}dB, SNR: {snr:.1f}dB")
+        
+        # Find gain with best SNR, avoiding saturation
+        optimal_gain = max(snr_results, key=lambda x: x[1])
+        return optimal_gain[0]
 bash
-# Enable maintenance mode
-curl -X POST http://localhost:8888/api/v1/system/maintenance \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"enabled": true, "message": "Scheduled maintenance"}'
+# Run gain optimization
+python scripts/optimize_gain.py --frequency 2.45e9 --device hackrf
+# Output: Optimal gain: 24dB, SNR: 28.5dB
+Filter Selection Guide
+yaml
+filters:
+  # Band-specific filters
+  "2.4GHz bandpass":
+    frequency: "2.4-2.5 GHz"
+    insertion_loss: "1.5dB"
+    rejection:
+      - "800-900MHz: >50dB"
+      - "1.2-1.3GHz: >40dB"
+      - "5.8GHz: >60dB"
+    application: "Urban 2.4GHz drone detection"
+    
+  "FM broadcast bandstop":
+    frequency: "88-108 MHz"
+    rejection: ">40dB"
+    application: "Remove FM broadcast interference"
+    
+  "LTE bandstop":
+    frequency: "700-900 MHz"
+    rejection: ">35dB"
+    application: "Cellular interference mitigation"
+    
+  "Low noise amplifier (LNA)":
+    gain: "20-30dB"
+    noise_figure: "<1dB"
+    p1db: ">10dBm"
+    application: "Weak signal amplification"
+Noise Mitigation
+bash
+# Identify noise sources
+rtl_power -f 0:6e9:1M -g 20 -i 1 -1 noise_scan.csv
+python scripts/analyze_noise.py noise_scan.csv
 
-# Disable maintenance mode
-curl -X POST http://localhost:8888/api/v1/system/maintenance \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"enabled": false}'
+# Common fixes for identified noise
+# USB noise
+sudo apt install usbguard
+# Add ferrite beads to USB cables
+
+# Power supply noise
+# Use linear power supply instead of switching
+# Add LC filter on DC input
+
+# Computer EMI
+# Use shielded case
+# Relocate computer away from antenna
+# Use fiber optic USB extenders
+
+# Environmental interference
+# Identify WiFi routers, move channels
+# Identify microwave ovens, time scheduling
+# Identify cell towers, add rejection filter
+Environmental Considerations
+Temperature Management
+bash
+# Monitor SDR temperature (HackRF)
+watch -n 1 hackrf_info | grep "Temperature"
+
+# Cooling solutions
+# Option 1: Passive heatsink
+sudo apt install lm-sensors
+sensors
+
+# Option 2: Active fan control
+cat > /etc/udev/rules.d/99-sdr-fan.rules << EOF
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6089", RUN+="/usr/local/bin/sdr-cooling.sh"
+EOF
+
+# Option 3: Enclosure with air circulation
+# Use metal enclosure as heatsink
+# Install 12V DC fan with PWM control
+Weather Protection (Outdoor Installations)
+bash
+# Weatherproof enclosure requirements
+# - IP65 or higher rating
+# - Solar radiation shield
+# - Active cooling (for hot climates)
+# - Heater (for freezing climates)
+
+# Antenna weatherproofing
+# - Use self-amalgamating tape on connectors
+# - Apply dielectric grease to connections
+# - Install drip loops in cables
+# - Use lightning arrestor
+
+# Lightning protection
+# - Install lightning rod above antenna
+# - Use gas discharge tube protector
+# - Ground all equipment
+# - Use fiber optic for data (not copper)
+Performance Testing
+Throughput Testing
+bash
+# Test maximum sample rate
+# HackRF
+hackrf_transfer -r /dev/null -s 20000000 -n 100000000
+
+# RTL-SDR
+rtl_sdr -f 2450000000 -s 2400000 -n 10000000 /dev/null
+
+# PlutoSDR
+iio_readdev -u ip:192.168.2.1 -b 1000000 cf-ad9361-lpc | dd of=/dev/null bs=1M
+
+# Measure performance metrics
+time hackrf_transfer -r test.raw -s 20000000 -n 1000000000 2>&1 | grep "throughput"
+Range Testing
+bash
+#!/bin/bash
+# range_test.sh - Test detection range
+
+# Place drone at measured distances
+distances=(50 100 200 300 500 1000)
+
+for distance in "${distances[@]}"; do
+    echo "Testing at ${distance}m..."
+    
+    # Record 1 minute of IQ data
+    hackrf_transfer -r range_test_${distance}m.raw \
+        -f 2450000000 -s 20000000 -n 600000000
+    
+    # Process detection
+    python scripts/analyze_range.py range_test_${distance}m.raw
+    
+    # Upload to server or log
+    curl -X POST https://api.drone-detector.com/test/range \
+        -d "distance=${distance}&file=range_test_${distance}m.raw"
+done
+Sensitivity Testing
+python
+# sensitivity_test.py
+import numpy as np
+from hackrf import HackRF
+
+def test_sensitivity():
+    """Measure receiver sensitivity at various frequencies"""
+    frequencies = [900e6, 2.4e9, 5.8e9]
+    gains = [0, 10, 20, 30, 40, 50]
+    
+    results = {}
+    
+    with HackRF() as hrf:
+        for freq in frequencies:
+            hrf.set_freq(freq)
+            
+            for gain in gains:
+                hrf.set_gain(gain)
+                
+                # Measure noise floor
+                noise = []
+                for _ in range(100):
+                    samples = hrf.read_samples(10000)
+                    power = 10 * np.log10(np.mean(np.abs(samples)**2))
+                    noise.append(power)
+                
+                results[f"{freq/1e9}GHz_{gain}dB"] = np.mean(noise)
+                print(f"Freq: {freq/1e9}GHz, Gain: {gain}dB, Noise: {np.mean(noise):.1f}dBm")
+    
+    return results
+
+results = test_sensitivity()
+Troubleshooting Hardware Issues
+Common Problems and Solutions
+bash
+# Problem: SDR not detected
+lsusb | grep -i "hackrf\|rtl"
+sudo dmesg | tail -20
+sudo modprobe hackrf
+sudo systemctl restart udev
+
+# Problem: USB disconnect/reconnect
+# Check USB port power
+lsusb -v 2>&1 | grep -E "MaxPower|bMaxPower"
+# Use powered USB hub
+# Use shorter, higher quality USB cable
+
+# Problem: High noise floor
+# Identify source
+python scripts/identify_noise.py --frequency 2.45e9
+# Typical fixes:
+# - Use shielded USB cable
+# - Add ferrite beads
+# - Use linear power supply
+# - Move antenna away from computer
+
+# Problem: Poor signal quality
+# Check antenna
+hackrf_info | grep "Antenna"
+# Check LNA power
+# Check for damaged cables
+
+# Problem: Overheating
+hackrf_info | grep "Temperature"
+# Add heatsink
+# Reduce gain
+# Reduce sample rate
+# Add fan
+
+# Problem: Frequency drift
+hackrf_cal -f 1000000000 -g 16  # Recalibrate
+rtl_test -p  # Check RTL PPM
+# Use external reference clock
+# Warm up device for 15 minutes
+Diagnostic Commands
+bash
+# Comprehensive hardware diagnostics
+# HackRF
+hackrf_info
+hackrf_clock
+hackrf_max283x
+hackrf_si5351c
+hackrf_rffc5071
+hackrf_spiflash -R
+
+# RTL-SDR
+rtl_test -t
+rtl_test -p
+rtl_eeprom -d 0
+rtl_biast -d 0
+
+# General USB
+lsusb -t
+usb-devices
+sudo lsusb -v | grep -E "iSerial|bcdDevice"
+
+# System
+dmesg | grep -i "usb\|sdr"
+lspci | grep -i usb
+sysctl -a | grep usb
+Hardware Logging
+yaml
+# config/hardware_monitoring.yaml
+monitoring:
+  enabled: true
+  interval: 60  # seconds
+  metrics:
+    - temperature
+    - gain_setting
+    - sample_rate
+    - frequency
+    - sample_dropped_rate
+    - usb_errors
+  logging:
+    file: /var/log/drone-detector/hardware.log
+    retention_days: 30
+  alerts:
+    temperature:
+      warning: 60°C
+      critical: 75°C
+    sample_drops:
+      warning: 1%
+      critical: 5%
+Hardware Maintenance
+Regular Maintenance Schedule
+Component	Interval	Action
+SDR Device	Daily	Check temperature, sample drops
+Antenna	Weekly	Inspect connections, weatherproofing
+Cables	Monthly	Check for damage, corrosion
+LNA	Monthly	Check gain, noise figure
+Power supply	Monthly	Measure voltage, current
+GPSDO	Quarterly	Check lock status, phase noise
+Full calibration	Annually	Factory calibration
+Cleaning Procedure
+bash
+# Antenna cleaning
+# Use isopropyl alcohol (70%) on connectors
+# Use compressed air on radiating elements
+# Apply new dielectric grease
+
+# SDR device cleaning
+# Use compressed air for ventilation ports
+# Check for dust accumulation
+# Clean USB connector with contact cleaner
+
+# Ground connections
+# Check resistance < 5 ohms
+# Clean grounding rods
+# Check for corrosion
+Calibration Checklist
+bash
+# Frequency calibration
+# Use GPS-disciplined oscillator or known broadcast station
+# Measure offset at multiple frequencies
+# Apply correction
+
+# Gain calibration
+# Use calibrated signal generator
+# Measure linearity across gain range
+# Create correction table
+
+# Time calibration
+# For TDOA systems
+# Measure timestamp error between devices
+# Apply calibration
+
+# Antenna calibration
+# Measure SWR
+# Measure radiation pattern
+# Verify connector loss
+Advanced Configurations
+Remote SDR Operation
+bash
+# Setup rtl_tcp server on remote SDR
+rtl_tcp -a 0.0.0.0 -p 1234 -f 2450000000 -g 20
+
+# Connect from client
+rtl_sdr -d rtl_tcp://remote_host:1234 -f 2450000000 -s 2400000 test.raw
+
+# With HackRF (using hackrf_net)
+hackrf_net -a remote_host -p 1234
+Multiple Frequency Bands (Frequency Hopping)
+yaml
+# config/hopping.yaml
+frequency_hopping:
+  enabled: true
+  bands:
+    - frequency: 2.45e9
+      dwell_ms: 100
+      gain: 24
+    - frequency: 5.8e9
+      dwell_ms: 100
+      gain: 24
+    - frequency: 915e6
+      dwell_ms: 100
+      gain: 30
+    - frequency: 1.2e9
+      dwell_ms: 100
+      gain: 30
+  transition_ms: 5
+  priority_events:
+    - type: "detection"
+      stay_ms: 1000
+Automatic Gain Control (AGC)
+python
+# agc_controller.py - Adaptive gain control
+class AGController:
+    def __init__(self, target_snr=25):
+        self.target_snr = target_snr
+        self.gain_history = []
+        
+    def adjust_gain(self, current_snr, current_gain):
+        # Calculate gain error
+        error = self.target_snr - current_snr
+        
+        # PID-like control
+        gain_adjustment = error * 0.5
+        
+        # Limit adjustments
+        new_gain = current_gain + gain_adjustment
+        new_gain = max(0, min(40, new_gain))  # Clamp 0-40dB
+        
+        self.gain_history.append(new_gain)
+        
+        # Smoothing
+        if len(self.gain_history) > 5:
+            smoothed_gain = np.mean(self.gain_history[-5:])
+            return int(smoothed_gain)
+        
+        return int(new_gain)
+Safety Guidelines
+RF Safety
+yaml
+# RF exposure limits (FCC/ICNIRP)
+power_density:
+  general_public: "0.1 mW/cm²"
+  occupational: "1 mW/cm²"
+
+# Safety distances for transmitter antennas
+min_distance:
+  "10W transmitter": "0.5m"
+  "100W transmitter": "2m"
+  "1000W transmitter": "6m"
+
+# Precautionary measures:
+# - Always terminate unused SDR ports with 50Ω load
+# - Do not touch active antenna elements
+# - Verify transmitter power before connection
+# - Use RF safety interlock on high power systems
+Electrical Safety
+bash
+# Grounding requirements
+# - Resistance to ground: < 5 ohms
+# - Ground rod depth: 2.4m (8ft) minimum
+# - Bond all equipment to common ground point
+
+# Power protection
+# - Use surge protector on AC mains
+# - Install UPS with AVR
+# - Use isolation transformer for sensitive equipment
+# - Implement over-current protection
+
+# Lightning safety
+# - Disconnect antennas during storms
+# - Install lightning arrestor at building entry
+# - Use gas discharge tubes on all coax lines
+# - Remove power during storm activity
+Procurement Guide
+Recommended Hardware Kits
+yaml
+# Starter Kit (~$200)
+- 1x RTL-SDR v3 ($30)
+- 1x 2.4GHz patch antenna ($20)
+- 1x USB extension cable with ferrite ($10)
+- 1x SMA to MCX adapter ($5)
+Total: ~$65
+
+# Professional Kit (~$500)
+- 1x HackRF One ($300)
+- 1x Wideband discone antenna ($80)
+- 1x LNA - 20dB gain ($40)
+- 1x 2.4GHz bandpass filter ($30)
+- 1x USB 3.0 extension cable ($15)
+- 1x SMA male to SMA male cable ($10)
+Total: ~$475
+
+# Enterprise Kit (~$2000)
+- 2x HackRF One with GPSDO ($800)
+- 2x Log-periodic antennas ($200)
+- 2x High-gain LNA 30dB ($100)
+- 2x Band-specific filters ($60)
+- 1x GPS disciplined oscillator ($300)
+- 1x 8-port power distribution ($80)
+- 1x Weatherproof enclosure ($100)
+- 1x Active USB 3.0 extender ($50)
+Total: ~$1690
+
+# TDOA Localization Kit (~$5000)
+- 3x HackRF One with GPSDO ($1200)
+- 3x High-precision GPS antennas ($300)
+- 3x Directional antennas ($300)
+- 3x High-dynamic LNA ($150)
+- 1x Precision time server ($2000)
+- 3x Weatherproof enclosures ($300)
+- 1x Network switch ($150)
+- 3x Cat6 shielded cables ($150)
+Total: ~$4550
+Where to Buy
+Component	Suppliers
+HackRF	Great Scott Gadgets, Amazon, Mouser
+RTL-SDR	Amazon, AliExpress, Nooelec
+Antennas	L-Com, Pasternack, Taoglas
+LNAs	Mini-Circuits, RF Bay, eBay
+Cables	Belden, Times Microwave, Amphenol
+Enclosures	Bud Industries, Hammond, Polycase
