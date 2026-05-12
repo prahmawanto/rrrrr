@@ -1,412 +1,389 @@
 ---
-name: ✨ Feature Request
-about: Suggest an idea or enhancement for the Drone Detector System
-title: '[FEATURE] '
-labels: enhancement, needs-triage
+name: 🔧 Hardware Issue
+about: Report hardware-related issues (SDR, antennas, USB, etc.)
+title: '[HARDWARE] '
+labels: hardware, bug, needs-triage
 assignees: ''
 
 ---
 
-## 🎯 Problem Statement
+## 🔧 Hardware Issue Description
 
-<!-- Is your feature request related to a problem? Please provide a clear description. -->
-**What problem would this feature solve?**
-<!-- Ex. I'm always frustrated when [...] -->
+<!-- A clear and concise description of the hardware issue. -->
 
-**Who would benefit from this feature?**
-<!-- e.g., Security operators, system administrators, developers, etc. -->
+**Hardware Component:**
+- [ ] SDR Device (HackRF, RTL-SDR, Pluto, etc.)
+- [ ] Antenna
+- [ ] LNA (Low Noise Amplifier)
+- [ ] USB Connection/Cable
+- [ ] Power Supply
+- [ ] GPS/Clock Synchronization
+- [ ] Other: ___________
 
-## 💡 Proposed Solution
+**Issue Type:**
+- [ ] Device not detected
+- [ ] Poor signal quality
+- [ ] Overheating
+- [ ] USB disconnection
+- [ ] Performance degradation
+- [ ] Physical damage
+- [ ] Driver/firmware issue
+- [ ] Other: ___________
 
-**Describe the solution you'd like**
-<!-- A clear and concise description of what you want to happen. -->
+## 📊 Hardware Configuration
 
-**Describe alternatives you've considered**
-<!-- A clear and concise description of any alternative solutions or features you've considered. -->
+**SDR Device Details:**
+<!-- Run detection commands and paste output -->
 
-## 🎨 User Experience
+<details>
+<summary>SDR Detection Output</summary>
 
-**How would users interact with this feature?**
-<!-- Describe the user interaction flow. Include UI mockups if applicable. -->
+```bash
+# HackRF
+hackrf_info
 
-**Example use case:**
-```python
-# Example code showing how the feature might be used
-from drone_detector import DetectionSystem
+# RTL-SDR
+rtl_test -t
+rtl_eeprom -d 0
 
-# Proposed API usage
-system = DetectionSystem()
-result = system.new_feature()
-📊 Use Cases
-<!-- Describe specific use cases where this feature would be valuable -->
-Use Case 1:
-Scenario:
-Current behavior:
-Desired behavior:
-Impact:
+# ADALM-PLUTO
+iio_info -s
 
-Use Case 2:
-Scenario:
-Current behavior:
-Desired behavior:
-Impact:
+# General USB
+lsusb
+lsusb -t
+dmesg | tail -50
+</details>
+Antenna Setup:
 
-🔬 Technical Details
-Proposed Implementation:
+Antenna Type: <!-- e.g., Discone, Log-periodic, Patch, Yagi -->
 
-<!-- If you have ideas on how to implement this, please share -->
-Dependencies:
+Frequency Range: <!-- e.g., 2.4-2.5 GHz -->
 
-<!-- List any new dependencies or system requirements -->
-New Python packages:
+Antenna Gain: <!-- e.g., 5 dBi -->
 
-New system libraries:
+Cable Type: <!-- e.g., LMR-400, RG-58 -->
 
-New hardware requirements:
+Cable Length: <!-- e.g., 10 meters -->
 
-API changes:
+Mounting Location: <!-- e.g., Rooftop, Window, Indoor -->
 
-Database schema changes:
+Height above ground: <!-- e.g., 15 meters -->
 
-Breaking Changes:
+Accessories:
 
-<!-- Will this feature break existing functionality? If so, how? -->
-🚀 Benefits
-<!-- List the benefits of implementing this feature -->
-Benefit	Impact (High/Medium/Low)	Description
-1.		
-2.		
-3.		
-📈 Success Metrics
-<!-- How would we measure the success of this feature? -->
-Performance improvement: _______%
+LNA (Gain: ___ dB)
 
-User satisfaction increase: _______%
+Bandpass Filter (Frequency: ___)
 
-Reduction in manual effort: _______%
+USB Isolator
 
-Other: _______
+Bias-Tee
 
-🗺️ Roadmap Consideration
-Priority:
+GPSDO (GPS Disciplined Oscillator)
 
-Critical (must have)
+Cooling Fan/Heatsink
 
-High (important)
+Other: ___________
 
-Medium (nice to have)
+Environmental Factors:
 
-Low (future consideration)
+Temperature: ___ °C / ___ °F
 
-Timeline expectations:
+Weather: ☀️ Clear / ☁️ Cloudy / 🌧️ Rain / ❄️ Snow
 
-<!-- e.g., within 1 month, next quarter, not time-sensitive -->
-Effort estimate:
+Interference sources nearby: <!-- e.g., WiFi routers, cell towers, microwave ovens -->
 
-Small (1-3 days)
+🔄 Steps to Reproduce
+<!-- Steps to reproduce the hardware issue: -->
+Connect hardware as described
 
-Medium (1-2 weeks)
+Run command: __________
 
-Large (1 month)
+Observe behavior
 
-Epic (multiple months)
+📊 Observed Behavior
+Symptoms:
 
-🔍 Research & Inspiration
-<!-- Have you seen this feature in other projects? Share links or examples -->
-Similar implementations:
+<!-- Describe what you're experiencing -->
+Error Messages:
 
-Project Name - How they solved it
+text
+<!-- Paste any error messages here -->
+LED Status:
 
-Project Name - Alternative approach
+Power LED: [ ] On / [ ] Off / [ ] Blinking
 
-Relevant documentation:
+Activity LED: [ ] On / [ ] Off / [ ] Blinking
 
-[Link to docs or papers]
+Other LEDs: ___________
 
-[Link to RFC or standards]
+Signal Quality Metrics:
 
+bash
+# Run these commands and paste output (if possible)
+
+# Signal strength
+hackrf_sweep -f 2400:2500 -n 10
+
+# Noise floor
+rtl_power -f 2400M:2500M:1M -g 20 -i 1 -1 noise_measurement.csv
+
+# Sample drops
+# For HackRF:
+hackrf_transfer -r /dev/null -s 20000000 -n 100000000 2>&1 | grep -i "drop"
+
+# For RTL-SDR:
+rtl_test -t 2>&1 | grep -i "lost"
+📈 Expected Behavior
+<!-- What should happen instead? -->
+Expected Signal Characteristics:
+
+Expected SNR: ___ dB
+
+Expected noise floor: ___ dBm
+
+Expected temperature: ___ °C
+
+🏗️ System Environment
+Operating System:
+
+bash
+uname -a
+cat /etc/os-release
+Drivers and Firmware:
+
+bash
+# Driver versions
+modinfo hackrf
+modinfo rtl2832
+
+# Firmware versions
+hackrf_info | grep "Firmware"
+rtl_eeprom -d 0 | grep "Firmware"
+USB Configuration:
+
+bash
+# USB bus information
+lsusb -t
+cat /sys/kernel/debug/usb/devices | grep -A 10 "HackRF"
+🩺 Diagnostic Tests Performed
+<!-- Check all that apply and provide results -->
+Basic connectivity test
+
+bash
+# Results:
+Signal test with known source
+
+bash
+# Results:
+Temperature monitoring
+
+bash
+# Results (temperature over time):
+USB bandwidth test
+
+bash
+# Results:
+Different USB port/cable test
+
+<!-- What happened? -->
+Different antenna test
+
+<!-- What happened? -->
+LNA bypass test (if applicable)
+
+<!-- What happened? -->
+Mock mode test (software-only)
+
+bash
+export USE_MOCK_HARDWARE=true
+# Results:
+🔧 Troubleshooting Attempted
+<!-- What have you tried to fix the issue? -->
+Restarted SDR device
+
+Reconnected USB cable
+
+Changed USB port
+
+Restarted computer
+
+Updated drivers
+
+Updated firmware
+
+Changed antenna
+
+Added/removed LNA
+
+Changed gain settings
+
+Changed frequency
+
+Reduced sample rate
+
+Added USB isolator
+
+Added cooling
+
+Other: ___________
+
+Results of troubleshooting:
+
+<!-- What happened after each attempt? -->
+📸 Photos/Videos
+<!-- If applicable, add photos of your hardware setup, LED status, or screenshots -->
+📋 Configuration
+<details> <summary>Hardware Configuration (config/hardware.yaml)</summary>
+yaml
+# Paste your hardware configuration here (redact sensitive info)
+</details>
 📎 Additional Context
-<!-- Add any other context, screenshots, or mockups about the feature request here -->
-Attachments:
+<!-- Any other relevant information -->
+When did the issue start? <!-- e.g., After update, after hardware change, always -->
 
-<!-- You can drag and drop images, diagrams, or other files here -->
+Does it happen consistently? <!-- Always / Sometimes / Rarely -->
+
+Does it happen with different software? <!-- e.g., SDR#, GQRX, other tools -->
+
+Any recent changes to the environment? <!-- e.g., New equipment, moved antenna -->
+
 ✅ Checklist
-I have searched for existing feature requests (including closed)
+I have searched for existing hardware issues (including closed)
 
-I have checked the documentation for existing functionality
+I have checked the hardware setup guide
 
-I have considered the impact on existing users
+I have tested with mock mode (software-only)
 
-I have provided clear use cases and benefits
+I have tried basic troubleshooting steps
 
-I have suggested a potential implementation approach
+I have included diagnostic output
 
-I have identified any breaking changes
+I have described my hardware configuration
 
-I have added relevant examples
+I have provided steps to reproduce
 
-I have indicated priority and timeline expectations
+I have attached photos if relevant
 
-🤝 Contribution
-<!-- Would you be willing to contribute to implementing this feature? -->
-Yes, I would like to work on this feature
+🚦 Severity Assessment
+Critical: Hardware non-functional, system cannot operate
 
-I would need guidance but am interested
+High: Major performance degradation, frequent issues
 
-No, but I would help test
+Medium: Intermittent issues, reduced performance
 
-No, I'm just suggesting the idea
+Low: Minor inconvenience, rare occurren ced
 
-<!-- If you're willing to contribute, please share your experience level: - Python: [Beginner/Intermediate/Expert] - SDR/Radio: [Beginner/Intermediate/Expert] - ML/AI: [Beginner/Intermediate/Expert] - Web/API: [Beginner/Intermediate/Expert] - Docker/K8s: [Beginner/Intermediate/Expert] -->
-📞 Follow-up
+📞 Contact for Follow-up
 Can we contact you for more information?
 
 Discord: @username
 
 GitHub: @username
 
-Email: (only if you're comfortable sharing)
+Email: (only if comfortable)
 
-<!-- Note: This template helps us understand feature requests better. Fill in as much detail as possible to help maintainers evaluate the request. -->
+<!-- Hardware issues often require detailed information. Please provide as much detail as possible to help us diagnose and fix the issue. -->
 text
 
-Here's also a `feature_request.yml` (YAML form-based version) as an alternative:
+Here's also a `config.yml` for issue templates (if not already created):
 
 ```yaml
-# .github/ISSUE_TEMPLATE/feature_request.yml
-name: "✨ Feature Request"
-description: "Suggest an idea or enhancement for the Drone Detector System"
-title: "[FEATURE]: "
-labels: ["enhancement", "needs-triage"]
-body:
-  - type: markdown
-    attributes:
-      value: |
-        ## ✨ Feature Request
-        Thanks for taking the time to suggest a feature! Please fill out the form below.
-        
-  - type: textarea
-    id: problem
-    attributes:
-      label: 🎯 Problem Statement
-      description: What problem would this feature solve?
-      placeholder: "I'm always frustrated when..."
-    validations:
-      required: true
-      
-  - type: textarea
-    id: solution
-    attributes:
-      label: 💡 Proposed Solution
-      description: Describe the solution you'd like
-      placeholder: "I would like to have..."
-    validations:
-      required: true
-      
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: 🔄 Alternatives Considered
-      description: What alternatives have you considered?
-      placeholder: "I've also thought about..."
-      
-  - type: textarea
-    id: use_cases
-    attributes:
-      label: 📊 Use Cases
-      description: Describe specific use cases
-      placeholder: |
-        Use Case 1:
-        - Scenario: 
-        - Current behavior:
-        - Desired behavior:
-    validations:
-      required: true
-      
-  - type: textarea
-    id: technical_details
-    attributes:
-      label: 🔬 Technical Details
-      description: Any implementation ideas or technical considerations?
-      placeholder: "This could be implemented by..."
-      
-  - type: checkboxes
-    id: dependencies
-    attributes:
-      label: 📦 Dependencies
-      options:
-        - label: New Python packages required
-        - label: New system libraries required
-        - label: New hardware requirements
-        - label: API changes needed
-        - label: Database schema changes needed
-        - label: Breaking changes
-          
-  - type: dropdown
-    id: priority
-    attributes:
-      label: 🚦 Priority
-      description: What priority would you assign?
-      options:
-        - Critical (must have)
-        - High (important)
-        - Medium (nice to have)
-        - Low (future consideration)
-    validations:
-      required: true
-      
-  - type: dropdown
-    id: effort
-    attributes:
-      label: 💪 Effort Estimate
-      options:
-        - Small (1-3 days)
-        - Medium (1-2 weeks)
-        - Large (1 month)
-        - Epic (multiple months)
-        
-  - type: textarea
-    id: benefits
-    attributes:
-      label: 🚀 Benefits
-      description: What are the benefits of this feature?
-      placeholder: |
-        - Benefit 1: 
-        - Benefit 2:
-        
-  - type: textarea
-    id: metrics
-    attributes:
-      label: 📈 Success Metrics
-      description: How would we measure success?
-      placeholder: |
-        - Performance improvement: 
-        - User satisfaction increase:
-        
-  - type: textarea
-    id: inspiration
-    attributes:
-      label: 🔍 Research & Inspiration
-      description: Have you seen this in other projects?
-      placeholder: "Similar implementation in: [project](link)"
-      
-  - type: textarea
-    id: context
-    attributes:
-      label: 📎 Additional Context
-      description: Any other context, screenshots, or mockups?
-      placeholder: "Drag and drop images here"
-      
-  - type: checkboxes
-    id: checklist
-    attributes:
-      label: ✅ Checklist
-      options:
-        - label: I have searched for existing feature requests
-          required: true
-        - label: I have checked the documentation
-          required: true
-        - label: I have considered the impact on existing users
-          required: true
-        - label: I have provided clear use cases
-          required: true
-          
-  - type: dropdown
-    id: contribution
-    attributes:
-      label: 🤝 Contribution
-      description: Would you be willing to contribute?
-      options:
-        - Yes, I would like to work on this
-        - I would need guidance but am interested
-        - Yes, I would help test
-        - No, I'm just suggesting the idea
-        
-  - type: input
-    id: discord
-    attributes:
-      label: 📞 Discord Username (optional)
-      placeholder: "@username"
-      
-  - type: markdown
-    attributes:
-      value: |
-        ---
-        Thank you for your feature request! We'll review it as soon as possible.
-This feature request template provides:
+# .github/ISSUE_TEMPLATE/config.yml
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Hardware Setup Guide
+    url: https://docs.drone-detector.com/hardware_setup
+    about: Check the hardware setup guide first
+  - name: 🔧 Troubleshooting Guide
+    url: https://docs.drone-detector.com/troubleshooting#hardware
+    about: Common hardware issues and solutions
+  - name: 💬 Discord Community
+    url: https://discord.gg/drone-detector
+    about: Get help from the community
+  - name: 📖 SDR Documentation
+    url: https://docs.drone-detector.com/sdr
+    about: SDR-specific documentation
+  - name: 🛒 Hardware Recommendations
+    url: https://docs.drone-detector.com/hardware#recommendations
+    about: Recommended hardware and vendors
+This hardware issue template provides:
 
-Problem Statement:
+Hardware-Specific Sections:
 
-Clear problem articulation
+Component identification (SDR, antenna, LNA, etc.)
 
-Identification of who would benefit
+Issue type classification
 
-Proposed Solution:
+Detailed configuration collection
 
-Detailed solution description
+Diagnostic Commands:
 
-Alternative approaches
+SDR detection commands for all devices
 
-Example code/API usage
+USB diagnostics
 
-Use Cases:
+Signal quality metrics
 
-Specific scenarios with current vs desired behavior
+Temperature monitoring
 
-Impact assessment per use case
+Environmental Factors:
 
-Technical Details:
+Temperature and weather conditions
 
-Implementation approach
+Interference sources
 
-Dependencies (packages, libraries, hardware)
+Mounting location details
 
-Breaking change identification
+Antenna Configuration:
 
-Benefits & Metrics:
+Type, gain, cable specs
 
-Tabulated benefits with impact levels
+Mounting height and location
 
-Success metrics for evaluation
+Accessories used
 
-Roadmap Considerations:
+Troubleshooting Steps:
 
-Priority selection (Critical to Low)
+Comprehensive checklist of attempted fixes
 
-Effort estimation
+Results tracking
 
-Timeline expectations
+Systematic approach
 
-Research References:
+Performance Metrics:
 
-Similar implementations in other projects
+SNR measurements
 
-Relevant documentation or standards
+Noise floor readings
 
-Contribution Intent:
+Sample drop analysis
 
-Willingness to implement
+Temperature data
 
-Experience level assessment
+USB Configuration:
 
-Testing commitment
+Bus information
 
-Checklist:
+Bandwidth testing
 
-Ensures thorough preparation
+Cable/port testing
 
-Promotes quality feature requests
+Software Comparison:
 
-The template helps maintainers:
+Test with other SDR software
 
-Understand the real problem users face
+Mock mode validation
 
-Evaluate feasibility and effort
+Driver version verification
 
-Prioritize based on impact and benefits
+Visual Documentation:
 
-Identify potential contributors
+Photos of hardware setup
 
-Plan roadmap accordingly
+LED status indicators
 
-The YAML version provides a more structured, form-based approach that can be easier for users to fill out while ensuring consistent data collection.
+Screenshots of issues
+
+This template helps hardware issues get properly diagnosed by collecting all the necessary information about the physical setup, environmental factors, and diagnostic test results.
