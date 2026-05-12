@@ -1,918 +1,897 @@
-# Drone Detector System - Hardware Setup Guide
+# Drone Detector - Mock Mode Usage Guide
 
 ## Overview
 
-This guide covers the installation, configuration, and optimization of SDR (Software Defined Radio) hardware for the Drone Detector system. It includes setup procedures for supported devices, antenna selection, calibration, and performance tuning.
-
-## Supported Hardware
-
-### SDR Devices
-
-| Device | Frequency Range | Bandwidth | Interface | Status | Use Case |
-|--------|----------------|-----------|-----------|--------|----------|
-| HackRF One | 1 MHz - 6 GHz | 20 MHz | USB 2.0 | ✅ Full Support | Multi-band scanning |
-| RTL-SDR v3 | 500 kHz - 1.7 GHz | 2.4 MHz | USB 2.0 | ✅ Full Support | Cost-effective 2.4GHz |
-| RTL-SDR v4 | 500 kHz - 1.7 GHz | 3.2 MHz | USB 3.0 | ✅ Full Support | Improved dynamic range |
-| ADALM-PLUTO | 325 MHz - 3.8 GHz | 20 MHz | USB 2.0 | ✅ Full Support | Educational/2.4GHz |
-| LimeSDR Mini | 10 MHz - 3.5 GHz | 30 MHz | USB 3.0 | ⚠️ Beta | Wideband scanning |
-| USRP B200 | 70 MHz - 6 GHz | 56 MHz | USB 3.0 | ⚠️ Beta | High-performance |
-| Airspy R2 | 24 MHz - 1.7 GHz | 10 MHz | USB 2.0 | ⚠️ Beta | Low noise floor |
-
-### Antennas
-
-| Antenna Type | Frequency | Gain | Pattern | Best For |
-|--------------|-----------|------|---------|----------|
-| Discone | 100 MHz - 3 GHz | 2-5 dBi | Omnidirectional | General purpose |
-| Log-periodic | 400 MHz - 6 GHz | 6-10 dBi | Directional | Specific bands |
-| Patch | 2.4 GHz | 5-8 dBi | Directional | 2.4GHz only |
-| Yagi | 2.4/5.8 GHz | 10-15 dBi | Highly directional | Long range |
-| Biconical | 70 MHz - 6 GHz | 0-3 dBi | Wide omni | Wideband scanning |
-| Spiral | 400 MHz - 6 GHz | 3-5 dBi | Circular | Multi-polarization |
-
-### Accessories
-
-| Accessory | Purpose | Recommended |
-|-----------|---------|-------------|
-| LNA (Low Noise Amplifier) | Boost weak signals | Required for long range |
-| Bandpass Filter | Reduce interference | Recommended for urban areas |
-| USB Isolator | Ground loop prevention | Recommended for field use |
-| RF Shield | Reduce EMI | Optional |
-| GPS Dongle | Time synchronization | Required for TDOA |
-| Cooling Fan | Prevent overheating | Required for continuous operation |
-
----
+Mock Mode simulates drone detection system behavior without physical SDR hardware. This is ideal for:
+- Development and testing without radio equipment
+- CI/CD pipeline integration
+- Training and demonstrations
+- Capacity planning and load testing
+- Algorithm development and validation
 
 ## Quick Start
 
-### Minimal Hardware Setup
+### Enable Mock Mode
 
 ```bash
-# 1. Connect SDR to USB port
-# 2. Attach antenna to SMA connector
-# 3. Install drivers (Ubuntu/Debian)
-sudo apt update
-sudo apt install -y hackrf rtl-sdr
+# Method 1: Environment variable
+export USE_MOCK_HARDWARE=true
+export HARDWARE_TYPE=mock
+python run.py
 
-# 4. Test SDR detection
-hackrf_info
-# or
-rtl_test -t
+# Method 2: Command line argument
+python run.py --mock
 
-# 5. Verify with software
-sudo rtl_power -f 2400M:2500M:1M -g 20 -i 10 | grep -v "^#"
-Hardware Connection Diagram
-text
-┌─────────────────────────────────────────────────────────────────┐
-│                     Drone Detector Hardware Setup               │
-│                                                                  │
-│  ┌──────────┐      ┌──────────┐      ┌──────────┐             │
-│  │ Antenna  │─────▶│   LNA    │─────▶│  Filter  │             │
-│  └──────────┘      │  (opt)   │      │  (opt)   │             │
-│                    └──────────┘      └────┬─────┘             │
-│                                           │                      │
-│                                           ▼                      │
-│                    ┌──────────┐      ┌──────────┐             │
-│                    │   SDR    │◀─────│   USB    │             │
-│                    │  Device  │      │ Isolator │             │
-│                    └────┬─────┘      └──────────┘             │
-│                         │                                        │
-│                         ▼                                        │
-│                    ┌──────────┐                                 │
-│                    │ Computer │                                 │
-│                    │   USB    │                                 │
-│                    └──────────┘                                 │
-│                                                                  │
-│  Optional:                                                        │
-│  ┌──────────┐      ┌──────────┐                                 │
-│  │   GPS    │─────▶│  Time    │                                 │
-│  │  Dongle  │      │  Sync    │                                 │
-│  └──────────┘      └──────────┘                                 │
-└─────────────────────────────────────────────────────────────────┘
-Device-Specific Installation
-HackRF One Installation
-Driver Installation
-bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install -y hackrf libhackrf-dev hackrf-tools
+# Method 3: Configuration file
+# Edit config/system.yaml
+system:
+  mode: development
+  mock_mode: true
 
-# Install from source (latest version)
-git clone https://github.com/greatscottgadgets/hackrf.git
-cd hackrf/host
-mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
-make -j4
-sudo make install
-sudo ldconfig
-
-# Install Python bindings
-pip install pyhackrf
-Firmware Update
-bash
-# Check current firmware
-hackrf_info | grep "Firmware Version"
-
-# Download latest firmware
-wget https://github.com/greatscottgadgets/hackrf/releases/latest/download/hackrf-linux.tar.xz
-tar xf hackrf-linux.tar.xz
-
-# Update firmware
-cd hackrf-*/firmware/bin
-hackrf_spiflash -w hackrf_one_usb.bin
-
-# Verify update
-hackrf_info
-Calibration
-bash
-# Frequency calibration (using known reference)
-hackrf_cal -c 10000000  # Crystal frequency adjustment
-hackrf_cal -f 1000000000 -g 16  # Frequency calibration at 1GHz
-
-# Store calibration values
-hackrf_cal -s  # Save to device
-
-# Verify calibration
-hackrf_sweep -f 1000:2000 -n 1
-Performance Optimization
-bash
-# Set USB buffer size
-echo 0 > /sys/module/usbcore/parameters/usbfs_memory_mb
-
-# Increase USB transfer size for HackRF
-hackrf_transfer -t /dev/null -s 20000000 -b 1000000
-
-# Optimize driver parameters
-sudo modprobe hackrf
-sudo sh -c 'echo -1 > /sys/module/hackrf/parameters/fifo_timeout_us'
-RTL-SDR Installation
-Driver Installation
-bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install -y rtl-sdr librtlsdr-dev
-
-# Install from source (with better performance)
-git clone https://github.com/osmocom/rtl-sdr.git
-cd rtl-sdr
-mkdir build && cd build
-cmake .. -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON
-make -j4
-sudo make install
-sudo ldconfig
-
-# Install Python bindings
-pip install pyrtlsdr
-
-# Blacklist default DVB-T driver
-sudo tee /etc/modprobe.d/rtl-sdr-blacklist.conf << EOF
-blacklist dvb_usb_rtl28xxu
-blacklist rtl2832
-blacklist rtl2830
-EOF
-
-sudo reboot
-Device Testing
-bash
-# Basic test - should see samples
-rtl_test -t
-
-# Gain testing
-rtl_test -g 0
-rtl_test -g 20
-rtl_test -g 40
-
-# Frequency stability test
-rtl_test -p
-
-# SNR test at different frequencies
-rtl_power -f 2400M:2500M:1M -g 20 -i 10 -1 -c 50% spectrum.csv
-Frequency Correction (PPM)
-bash
-# Find PPM offset using known reference (e.g., GSM cell tower)
-rtl_test -p
-
-# Apply correction (example: 1.5 PPM)
-rtl_sdr -f 100000000 -p 1.5 test.raw
-
-# Permanent correction in config
-echo "rtl_sdr_ppm=1.5" >> ~/.config/drone-detector/hardware.yaml
-ADALM-PLUTO Installation
-Driver Installation
-bash
-# Install libiio and dependencies
-sudo apt update
-sudo apt install -y libiio-utils libiio-dev libad9361-dev
-
-# Install Pluto firmware
-wget https://github.com/analogdevicesinc/plutosdr-fw/releases/latest/download/plutosdr-fw-latest.zip
-unzip plutosdr-fw-latest.zip
-
-# Update firmware
-pluto_fw_update.py plutosdr-fw-latest/pluto.frm
-
-# Verify connection
-iio_info -s
-Network Configuration
-bash
-# Default Pluto IP: 192.168.2.1
-# Configure computer network interface
-sudo ip addr add 192.168.2.10/24 dev eth0
-sudo ip link set eth0 up
-
-# Or use USB network mode
-modprobe g_serial
-modprobe g_ether
-
-# Test connection
-ping 192.168.2.1
-iio_info -u ip:192.168.2.1
-Performance Tuning
-bash
-# Increase buffer size
-echo 4096 > /sys/bus/iio/devices/iio:device0/buffer/length
-
-# Set higher sample rate
-iio_attr -u ip:192.168.2.1 -c ad9361-phy voltage0 sampling_frequency 20000000
-
-# Enable high-performance mode
-iio_attr -u ip:192.168.2.1 -d ad9361-phy tx_path_rates rf_bandwidth 20000000
-Antenna Setup
-Antenna Selection Guide
-yaml
-# Recommended antenna configurations by scenario
-
-Scenario: "Urban 2.4GHz monitoring"
-  primary: "Patch 2.4GHz"
-  secondary: "Discone"
-  accessories:
-    - "2.4GHz bandpass filter"
-    - "LNA 15dB gain"
-
-Scenario: "Suburban multi-band"
-  primary: "Log-periodic 400MHz-6GHz"
-  secondary: "Biconical"
-  accessories:
-    - "LNA 20dB gain"
-    - "FM broadcast filter"
-
-Scenario: "Rural long range"
-  primary: "Yagi 2.4GHz 15dBi"
-  secondary: "Yagi 5.8GHz 15dBi"
-  accessories:
-    - "High-gain LNA 30dB"
-    - "Low-loss coax"
-    - "Elevation mount"
-
-Scenario: "Mobile/DJI tracking"
-  primary: "Biconical wideband"
-  accessories:
-    - "GPS for position"
-    - "Magnetic mount"
-    - "12V DC power"
-Antenna Placement
-text
-┌─────────────────────────────────────────────────────────────┐
-│                   Antenna Placement Guide                   │
-│                                                              │
-│  Best:                                                      │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Rooftop mount, clear line of sight                │    │
-│  │  Above surrounding structures                       │    │
-│  │  Minimum 1m from metal objects                     │    │
-│  │  Ground plane (if required by antenna)             │    │
-│  └────────────────────────────────────────────────────┘    │
-│                                                              │
-│  Acceptable:                                                │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Window mount, as high as possible                 │    │
-│  │  Away from metal window frames                     │    │
-│  │  Exterior wall mount                               │    │
-│  └────────────────────────────────────────────────────┘    │
-│                                                              │
-│  Avoid:                                                     │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Near electronic devices (computers, routers)      │    │
-│  │  Inside metal enclosures/equipment racks           │    │
-│  │  Near large metal surfaces                         │    │
-│  │  Underground or basement                          │    │
-│  └────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-Coaxial Cable Selection
-Cable Type	Loss at 2.4GHz (per 10m)	Use Case
-RG-58	-15 dB	Short runs (<5m)
-LMR-240	-8 dB	Medium runs (5-15m)
-LMR-400	-4 dB	Long runs (15-30m)
-LMR-600	-2.5 dB	Very long (>30m)
-bash
-# Calculate cable loss at 2.4GHz
-# LMR-400: ~0.4dB/m
-# 10m cable: -4dB loss
-# Required LNA gain = 4dB + (cable loss) + 10dB (margin)
-
-# Example cable calculation function
-cable_loss() {
-    local freq=$1  # 2.4e9
-    local length=$2  # meters
-    # LMR-400 loss formula (dB/m)
-    loss_db_per_m = 0.25 * sqrt(freq/1e9)
-    total_loss = loss_db_per_m * length
-}
-Multi-SDR Configuration
-TDOA (Time Difference of Arrival) Setup
-For drone localization using multiple receivers:
-
-bash
-# Hardware requirements per node:
-# - GPS-disciplined oscillator (GPSDO)
-# - High stability reference clock
-# - Precision time synchronization
-
-# Synchronize multiple devices
-# Method 1: GPS PPS signal
-sudo apt install gpsd gpsd-clients
-sudo systemctl enable gpsd
-
-# Configure GPS sharing
-sudo tee /etc/default/gpsd << EOF
-START_DAEMON="true"
-USBAUTO="true"
-DEVICES="/dev/ttyACM0"
-GPSD_OPTIONS="-n"
-EOF
-
-# Check synchronization
-gpsmon
-cgps -s
-Clock Distribution
-text
-┌─────────────────────────────────────────────────────────────────┐
-│                  Multi-SDR Clock Distribution                   │
-│                                                                  │
-│  Option 1: GPS Disciplined Oscillator (GPSDO)                   │
-│  ┌──────────┐      ┌──────────┐                               │
-│  │   GPS    │─────▶│  GPSDO   │─────▶ 10MHz out to all SDRs  │
-│  │ Antenna  │      │          │                               │
-│  └──────────┘      └────────────────────────────┬────────────┘│
-│                                                   │              │
-│                            ┌──────────────────────┼────────────┐│
-│                            │                      │            ││
-│                            ▼                      ▼            ││
-│                    ┌──────────┐            ┌──────────┐       ││
-│                    │  SDR #1  │            │  SDR #2  │       ││
-│                    │ 10MHz IN │            │ 10MHz IN │       ││
-│                    └──────────┘            └──────────┘       ││
-│                                                                 │
-│  Option 2: Network Time Protocol (NTP)                         │
-│  ┌──────────┐                                                    │
-│  │   GPS    │─────▶ PTP/NTP Server ─────▶ All computers       │
-│  │ Antenna  │                                                    │
-│  └──────────┘                                                    │
-│                                                                  │
-│  Option 3: Shared Reference Clock                              │
-│  ┌──────────┐      ┌──────────┐                               │
-│  │   OCXO   │─────▶│  Buffer  │─────▶ Distribution amp      │
-│  │ Reference│      │   Amp    │       to all SDRs            │
-│  └──────────┘      └──────────┘                               │
-└─────────────────────────────────────────────────────────────────┘
-Multi-SDR Configuration File
-yaml
-# config/multi_sdr.yaml
 hardware:
-  devices:
-    - id: "hackrf_1"
-      type: "hackrf"
-      serial: "HACKRF000001"
-      frequency: 2.45e9
-      sample_rate: 20e6
-      gain: 24
-      position:
-        latitude: 37.7749
-        longitude: -122.4194
-        altitude: 10.0
-      clock_source: "gpsdo"
-      time_source: "gps"
-      
-    - id: "hackrf_2"
-      type: "hackrf"
-      serial: "HACKRF000002"
-      frequency: 2.45e9
-      sample_rate: 20e6
-      gain: 24
-      position:
-        latitude: 37.7750
-        longitude: -122.4195
-        altitude: 10.0
-      clock_source: "gpsdo"
-      time_source: "gps"
-      
-    - id: "rtl_1"
-      type: "rtl_sdr"
-      index: 0
-      frequency: 2.45e9
-      sample_rate: 2.4e6
-      gain: 30
-      ppm: 1.5  # Frequency correction
-      bias_tee: true  # Enable for active antenna
-      
-  tdoa:
+  type: mock
+  mock_scenario: "default"
+Verify Mock Mode is Active
+bash
+# Check status
+curl http://localhost:8888/api/v1/system/info
+
+# Response should show:
+{
+  "hardware": {
+    "type": "mock",
+    "connected": true,
+    "mock_active": true
+  }
+}
+
+# Check logs
+docker-compose logs api | grep -i mock
+# Should see: "Initializing Mock Hardware...", "Mock mode active"
+Mock Mode Architecture
+text
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Mock Mode Architecture                       │
+│                                                                      │
+│  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐     │
+│  │   Mock SDR   │─────▶│ Mock Signal  │─────▶│   Detector   │     │
+│  │   Hardware   │      │  Generator   │      │   Pipeline   │     │
+│  └──────────────┘      └──────────────┘      └──────┬───────┘     │
+│                                                      │              │
+│  ┌──────────────┐      ┌──────────────┐             │              │
+│  │   Mock IQ    │─────▶│   Mock       │             │              │
+│  │   Files      │      │   Drone      │◀────────────┘              │
+│  └──────────────┘      │   Events     │                            │
+│                        └──────────────┘                            │
+│                                                                      │
+│  Mock Data Sources:                                                 │
+│  • Synthetic signal generation                                      │
+│  • Pre-recorded IQ files                                           │
+│  • Programmatic scenarios                                          │
+│  • Random event injection                                          │
+└─────────────────────────────────────────────────────────────────────┘
+Configuration
+Mock Mode Configuration File
+yaml
+# config/mock_config.yaml
+mock:
+  # General settings
+  enabled: true
+  hardware_type: "mock_hackrf"  # mock_hackrf, mock_rtl, mock_pluto
+  
+  # Signal generation
+  signal_generator:
     enabled: true
-    reference_device: "hackrf_1"
-    max_distance_m: 1000
-    update_rate: 10  # Hz
-    algorithm: "gcc_phat"  # Generalized cross-correlation
+    sample_rate: 2000000  # Hz
+    center_frequency: 2450000000  # Hz
+    noise_floor: -100  # dBm
+    snr_range: [10, 30]  # dB
+    fading_enabled: true
     
-  synchronization:
-    method: "gps"
-    pps_enabled: true
-    max_timestamp_error_us: 100
-    calibration_interval: 3600  # seconds
-Signal Optimization
-Gain Settings Optimization
+  # Drone simulation
+  drone_simulation:
+    enabled: true
+    min_drones: 1
+    max_drones: 5
+    spawn_rate: 0.1  # drones per second
+    movement_enabled: true
+    
+  # Data sources
+  data_sources:
+    - type: "synthetic"  # Generate synthetic IQ data
+      weight: 0.7
+    - type: "replay"     # Replay pre-recorded IQ
+      weight: 0.3
+      source_dir: "/app/data/iq/mock"
+      
+  # Performance simulation
+  performance:
+    simulate_latency_ms: [10, 50]  # Random latency
+    simulate_cpu_load: true
+    max_cpu_percent: 30
+    simulate_dropped_samples: false
+    drop_rate: 0.001  # 0.1% drops
+    
+  # Error simulation
+  error_simulation:
+    simulate_hardware_errors: false
+    error_rate: 0.01  # 1% error rate
+    error_types: ["timeout", "disconnect", "overflow"]
+    
+  # Scenarios
+  scenarios:
+    default: "urban_low_density"
+    available:
+      - "urban_low_density"
+      - "urban_high_density"
+      - "rural_scattered"
+      - "multi_band"
+      - "interference_heavy"
+      - "tdoa_localization"
+Environment Variables
+bash
+# Basic mock configuration
+export USE_MOCK_HARDWARE=true
+export MOCK_SCENARIO="urban_high_density"
+export MOCK_DRONE_COUNT=10
+
+# Signal parameters
+export MOCK_NOISE_FLOOR=-100
+export MOCK_SNR_MIN=10
+export MOCK_SNR_MAX=30
+
+# Performance simulation
+export MOCK_LATENCY_MS=25
+export MOCK_CPU_LOAD=20
+
+# Data source
+export MOCK_DATA_SOURCE="synthetic"
+export MOCK_DATA_DIR="/app/data/iq/mock"
+
+# Error simulation
+export MOCK_ERROR_RATE=0.001
+export MOCK_SIMULATE_HARDWARE_ERRORS=false
+Mock Hardware Components
+MockSDR Class
 python
-# gain_optimizer.py - Automatic gain optimization
+# Infrastructure/hardware/mock_hardware.py
+from infrastructure.hardware.mock_hardware import MockSDR
+
+# Initialize mock SDR
+mock_sdr = MockSDR()
+mock_sdr.initialize({
+    'sample_rate': 2e6,
+    'center_frequency': 2.45e9,
+    'gain': 20,
+    'mock_scenario': 'urban_low_density'
+})
+
+# Start streaming
+async for iq_samples in mock_sdr.start_stream():
+    # iq_samples contains simulated IQ data
+    process_samples(iq_samples)
+
+# Inject custom drone
+mock_sdr.inject_drone(
+    drone_type="DJI Mavic 3",
+    frequency=2.45e9,
+    signal_power=-50,
+    duration_seconds=10
+)
+
+# Simulate hardware error
+mock_sdr.simulate_error("disconnect")
+
+# Get mock status
+status = mock_sdr.get_status()
+print(status['mock_mode'], status['simulated_drones'])
+Mock Hardware Factory
+python
+# Using hardware factory with mock
+from infrastructure.hardware.hardware_factory import HardwareFactory
+
+factory = HardwareFactory()
+config = {
+    'type': 'mock',
+    'mock_config': {
+        'scenario': 'urban_high_density',
+        'sample_rate': 5e6
+    }
+}
+
+sdr = factory.create_hardware(config)
+Mock Signal Generation
+Synthetic IQ Generation
+python
+# scripts/generate_mock_data.py - Create synthetic IQ data
+
+from mock_signal_generator import MockSignalGenerator
+
+# Initialize generator
+generator = MockSignalGenerator(
+    sample_rate=20e6,
+    duration_seconds=60,
+    noise_floor=-100
+)
+
+# Add drone signals
+generator.add_drone_signal(
+    drone_type="DJI",
+    frequency_offset=10e6,
+    power=-50,
+    bandwidth=20e6
+)
+
+generator.add_drone_signal(
+    drone_type="FPV",
+    frequency_offset=-15e6,
+    power=-45,
+    bandwidth=5e6
+)
+
+# Generate IQ data
+iq_samples = generator.generate()
+
+# Save to file
+generator.save_to_file("generated_iq.bin")
+Scenario Templates
+yaml
+# config/mock_scenarios/urban_low_density.yaml
+name: "Urban Low Density"
+description: "Low drone traffic in urban environment"
+
+environment:
+  noise_floor: -95
+  interference_sources:
+    - type: "wifi"
+      channels: [1, 6, 11]
+      power: -70
+    - type: "bluetooth"
+      channels: [78]
+      power: -80
+
+drones:
+  - type: "DJI Mavic 3"
+    frequency: 2.45e9
+    power: -50
+    duration: 30
+    movement:
+      type: "hover"
+      radius: 50
+      
+  - type: "FPV Analog"
+    frequency: 5.8e9
+    power: -45
+    duration: 45
+    movement:
+      type: "flyby"
+      speed: 10  # m/s
+
+schedule:
+  - time: 0-300
+    drones: [1]
+  - time: 300-600
+    drones: [2]
+  - time: 600-900
+    drones: [1, 2]
+Programmatic Signal Generation
+python
+# Custom signal generation
 
 import numpy as np
-from rtlsdr import RtlSdr
+from scipy import signal
 
-class GainOptimizer:
-    def __init__(self, device):
-        self.device = device
-        self.gain_range = range(0, 50, 5)  # 0 to 45dB in 5dB steps
-        
-    def measure_snr(self, frequency, gain):
-        """Measure SNR at specific gain setting"""
-        self.device.set_center_freq(frequency)
-        self.device.set_gain(gain)
-        
-        # Collect samples
-        samples = self.device.read_samples(100000)
-        
-        # Calculate signal power vs noise
-        signal_power = np.mean(np.abs(samples) ** 2)
-        
-        # Estimate noise floor (median of sorted powers)
-        power_sorted = np.sort(np.abs(samples) ** 2)
-        noise_power = np.median(power_sorted[:len(power_sorted)//2])
-        
-        snr = 10 * np.log10(signal_power / noise_power)
-        return snr
+class CustomMockGenerator:
+    """Generate custom mock signals"""
     
-    def optimize_gain(self, frequency):
-        """Find optimal gain setting"""
-        snr_results = []
+    def generate_ofdm_signal(self, duration, bandwidth, subcarriers=1024):
+        """Generate OFDM signal (DJI-like)"""
+        sample_rate = bandwidth * 2
+        n_samples = int(duration * sample_rate)
         
-        for gain in self.gain_range:
-            snr = self.measure_snr(frequency, gain)
-            snr_results.append((gain, snr))
-            print(f"Gain: {gain}dB, SNR: {snr:.1f}dB")
+        # Generate random QAM symbols
+        symbols = (2 * np.random.randint(0, 2, n_samples) - 1) + \
+                  1j * (2 * np.random.randint(0, 2, n_samples) - 1)
         
-        # Find gain with best SNR, avoiding saturation
-        optimal_gain = max(snr_results, key=lambda x: x[1])
-        return optimal_gain[0]
+        # OFDM modulation
+        ofdm_signal = self._ofdm_modulate(symbols, subcarriers)
+        
+        return ofdm_signal
+    
+    def generate_fm_signal(self, duration, bandwidth, modulation_index=1.5):
+        """Generate analog FM signal (FPV-like)"""
+        sample_rate = bandwidth * 5
+        t = np.arange(0, duration, 1/sample_rate)
+        
+        # Baseband message
+        message = np.sin(2 * np.pi * 100 * t) + \
+                  0.5 * np.sin(2 * np.pi * 300 * t)
+        
+        # FM modulation
+        fm_signal = np.exp(1j * 2 * np.pi * modulation_index * 
+                          np.cumsum(message) / sample_rate)
+        
+        return fm_signal
+Mock Data Replay
+Recording Real Signals for Replay
 bash
-# Run gain optimization
-python scripts/optimize_gain.py --frequency 2.45e9 --device hackrf
-# Output: Optimal gain: 24dB, SNR: 28.5dB
-Filter Selection Guide
+# Record real IQ data for later replay
+python scripts/record_live_for_mock.py \
+    --duration 300 \
+    --frequency 2.45e9 \
+    --sample-rate 20e6 \
+    --output /app/data/iq/mock/live_session_001.iq
+
+# Convert to mock format
+python scripts/convert_to_mock.py \
+    --input live_session_001.iq \
+    --add-metadata \
+    --include-detections
+Replay Configuration
 yaml
-filters:
-  # Band-specific filters
-  "2.4GHz bandpass":
-    frequency: "2.4-2.5 GHz"
-    insertion_loss: "1.5dB"
-    rejection:
-      - "800-900MHz: >50dB"
-      - "1.2-1.3GHz: >40dB"
-      - "5.8GHz: >60dB"
-    application: "Urban 2.4GHz drone detection"
-    
-  "FM broadcast bandstop":
-    frequency: "88-108 MHz"
-    rejection: ">40dB"
-    application: "Remove FM broadcast interference"
-    
-  "LTE bandstop":
-    frequency: "700-900 MHz"
-    rejection: ">35dB"
-    application: "Cellular interference mitigation"
-    
-  "Low noise amplifier (LNA)":
-    gain: "20-30dB"
-    noise_figure: "<1dB"
-    p1db: ">10dBm"
-    application: "Weak signal amplification"
-Noise Mitigation
-bash
-# Identify noise sources
-rtl_power -f 0:6e9:1M -g 20 -i 1 -1 noise_scan.csv
-python scripts/analyze_noise.py noise_scan.csv
-
-# Common fixes for identified noise
-# USB noise
-sudo apt install usbguard
-# Add ferrite beads to USB cables
-
-# Power supply noise
-# Use linear power supply instead of switching
-# Add LC filter on DC input
-
-# Computer EMI
-# Use shielded case
-# Relocate computer away from antenna
-# Use fiber optic USB extenders
-
-# Environmental interference
-# Identify WiFi routers, move channels
-# Identify microwave ovens, time scheduling
-# Identify cell towers, add rejection filter
-Environmental Considerations
-Temperature Management
-bash
-# Monitor SDR temperature (HackRF)
-watch -n 1 hackrf_info | grep "Temperature"
-
-# Cooling solutions
-# Option 1: Passive heatsink
-sudo apt install lm-sensors
-sensors
-
-# Option 2: Active fan control
-cat > /etc/udev/rules.d/99-sdr-fan.rules << EOF
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6089", RUN+="/usr/local/bin/sdr-cooling.sh"
-EOF
-
-# Option 3: Enclosure with air circulation
-# Use metal enclosure as heatsink
-# Install 12V DC fan with PWM control
-Weather Protection (Outdoor Installations)
-bash
-# Weatherproof enclosure requirements
-# - IP65 or higher rating
-# - Solar radiation shield
-# - Active cooling (for hot climates)
-# - Heater (for freezing climates)
-
-# Antenna weatherproofing
-# - Use self-amalgamating tape on connectors
-# - Apply dielectric grease to connections
-# - Install drip loops in cables
-# - Use lightning arrestor
-
-# Lightning protection
-# - Install lightning rod above antenna
-# - Use gas discharge tube protector
-# - Ground all equipment
-# - Use fiber optic for data (not copper)
-Performance Testing
-Throughput Testing
-bash
-# Test maximum sample rate
-# HackRF
-hackrf_transfer -r /dev/null -s 20000000 -n 100000000
-
-# RTL-SDR
-rtl_sdr -f 2450000000 -s 2400000 -n 10000000 /dev/null
-
-# PlutoSDR
-iio_readdev -u ip:192.168.2.1 -b 1000000 cf-ad9361-lpc | dd of=/dev/null bs=1M
-
-# Measure performance metrics
-time hackrf_transfer -r test.raw -s 20000000 -n 1000000000 2>&1 | grep "throughput"
-Range Testing
-bash
-#!/bin/bash
-# range_test.sh - Test detection range
-
-# Place drone at measured distances
-distances=(50 100 200 300 500 1000)
-
-for distance in "${distances[@]}"; do
-    echo "Testing at ${distance}m..."
-    
-    # Record 1 minute of IQ data
-    hackrf_transfer -r range_test_${distance}m.raw \
-        -f 2450000000 -s 20000000 -n 600000000
-    
-    # Process detection
-    python scripts/analyze_range.py range_test_${distance}m.raw
-    
-    # Upload to server or log
-    curl -X POST https://api.drone-detector.com/test/range \
-        -d "distance=${distance}&file=range_test_${distance}m.raw"
-done
-Sensitivity Testing
-python
-# sensitivity_test.py
-import numpy as np
-from hackrf import HackRF
-
-def test_sensitivity():
-    """Measure receiver sensitivity at various frequencies"""
-    frequencies = [900e6, 2.4e9, 5.8e9]
-    gains = [0, 10, 20, 30, 40, 50]
-    
-    results = {}
-    
-    with HackRF() as hrf:
-        for freq in frequencies:
-            hrf.set_freq(freq)
-            
-            for gain in gains:
-                hrf.set_gain(gain)
-                
-                # Measure noise floor
-                noise = []
-                for _ in range(100):
-                    samples = hrf.read_samples(10000)
-                    power = 10 * np.log10(np.mean(np.abs(samples)**2))
-                    noise.append(power)
-                
-                results[f"{freq/1e9}GHz_{gain}dB"] = np.mean(noise)
-                print(f"Freq: {freq/1e9}GHz, Gain: {gain}dB, Noise: {np.mean(noise):.1f}dBm")
-    
-    return results
-
-results = test_sensitivity()
-Troubleshooting Hardware Issues
-Common Problems and Solutions
-bash
-# Problem: SDR not detected
-lsusb | grep -i "hackrf\|rtl"
-sudo dmesg | tail -20
-sudo modprobe hackrf
-sudo systemctl restart udev
-
-# Problem: USB disconnect/reconnect
-# Check USB port power
-lsusb -v 2>&1 | grep -E "MaxPower|bMaxPower"
-# Use powered USB hub
-# Use shorter, higher quality USB cable
-
-# Problem: High noise floor
-# Identify source
-python scripts/identify_noise.py --frequency 2.45e9
-# Typical fixes:
-# - Use shielded USB cable
-# - Add ferrite beads
-# - Use linear power supply
-# - Move antenna away from computer
-
-# Problem: Poor signal quality
-# Check antenna
-hackrf_info | grep "Antenna"
-# Check LNA power
-# Check for damaged cables
-
-# Problem: Overheating
-hackrf_info | grep "Temperature"
-# Add heatsink
-# Reduce gain
-# Reduce sample rate
-# Add fan
-
-# Problem: Frequency drift
-hackrf_cal -f 1000000000 -g 16  # Recalibrate
-rtl_test -p  # Check RTL PPM
-# Use external reference clock
-# Warm up device for 15 minutes
-Diagnostic Commands
-bash
-# Comprehensive hardware diagnostics
-# HackRF
-hackrf_info
-hackrf_clock
-hackrf_max283x
-hackrf_si5351c
-hackrf_rffc5071
-hackrf_spiflash -R
-
-# RTL-SDR
-rtl_test -t
-rtl_test -p
-rtl_eeprom -d 0
-rtl_biast -d 0
-
-# General USB
-lsusb -t
-usb-devices
-sudo lsusb -v | grep -E "iSerial|bcdDevice"
-
-# System
-dmesg | grep -i "usb\|sdr"
-lspci | grep -i usb
-sysctl -a | grep usb
-Hardware Logging
-yaml
-# config/hardware_monitoring.yaml
-monitoring:
+# config/replay_config.yaml
+replay:
   enabled: true
-  interval: 60  # seconds
-  metrics:
-    - temperature
-    - gain_setting
-    - sample_rate
-    - frequency
-    - sample_dropped_rate
-    - usb_errors
-  logging:
-    file: /var/log/drone-detector/hardware.log
-    retention_days: 30
-  alerts:
-    temperature:
-      warning: 60°C
-      critical: 75°C
-    sample_drops:
-      warning: 1%
-      critical: 5%
-Hardware Maintenance
-Regular Maintenance Schedule
-Component	Interval	Action
-SDR Device	Daily	Check temperature, sample drops
-Antenna	Weekly	Inspect connections, weatherproofing
-Cables	Monthly	Check for damage, corrosion
-LNA	Monthly	Check gain, noise figure
-Power supply	Monthly	Measure voltage, current
-GPSDO	Quarterly	Check lock status, phase noise
-Full calibration	Annually	Factory calibration
-Cleaning Procedure
+  source_type: "directory"
+  source_path: "/app/data/iq/mock"
+  
+  repeat: true
+  loop_count: 10
+  
+  randomize_order: true
+  
+  metadata:
+    include_spectrum: true
+    include_detections: true
+    
+  performance:
+    speed_factor: 1.0  # Replay speed multiplier
+    drop_frames: false
+Replay API
 bash
-# Antenna cleaning
-# Use isopropyl alcohol (70%) on connectors
-# Use compressed air on radiating elements
-# Apply new dielectric grease
+# List available replay files
+curl http://localhost:8888/api/v1/mock/replay/files
 
-# SDR device cleaning
-# Use compressed air for ventilation ports
-# Check for dust accumulation
-# Clean USB connector with contact cleaner
+# Start replay of specific file
+curl -X POST http://localhost:8888/api/v1/mock/replay/start \
+  -H "Content-Type: application/json" \
+  -d '{"file": "dji_mavic_2.4g.iq", "loop": true}'
 
-# Ground connections
-# Check resistance < 5 ohms
-# Clean grounding rods
-# Check for corrosion
-Calibration Checklist
-bash
-# Frequency calibration
-# Use GPS-disciplined oscillator or known broadcast station
-# Measure offset at multiple frequencies
-# Apply correction
+# Stop replay
+curl -X POST http://localhost:8888/api/v1/mock/replay/stop
 
-# Gain calibration
-# Use calibrated signal generator
-# Measure linearity across gain range
-# Create correction table
-
-# Time calibration
-# For TDOA systems
-# Measure timestamp error between devices
-# Apply calibration
-
-# Antenna calibration
-# Measure SWR
-# Measure radiation pattern
-# Verify connector loss
-Advanced Configurations
-Remote SDR Operation
-bash
-# Setup rtl_tcp server on remote SDR
-rtl_tcp -a 0.0.0.0 -p 1234 -f 2450000000 -g 20
-
-# Connect from client
-rtl_sdr -d rtl_tcp://remote_host:1234 -f 2450000000 -s 2400000 test.raw
-
-# With HackRF (using hackrf_net)
-hackrf_net -a remote_host -p 1234
-Multiple Frequency Bands (Frequency Hopping)
-yaml
-# config/hopping.yaml
-frequency_hopping:
-  enabled: true
-  bands:
-    - frequency: 2.45e9
-      dwell_ms: 100
-      gain: 24
-    - frequency: 5.8e9
-      dwell_ms: 100
-      gain: 24
-    - frequency: 915e6
-      dwell_ms: 100
-      gain: 30
-    - frequency: 1.2e9
-      dwell_ms: 100
-      gain: 30
-  transition_ms: 5
-  priority_events:
-    - type: "detection"
-      stay_ms: 1000
-Automatic Gain Control (AGC)
+# Get replay status
+curl http://localhost:8888/api/v1/mock/replay/status
+Testing with Mock Mode
+Unit Tests
 python
-# agc_controller.py - Adaptive gain control
-class AGController:
-    def __init__(self, target_snr=25):
-        self.target_snr = target_snr
-        self.gain_history = []
-        
-    def adjust_gain(self, current_snr, current_gain):
-        # Calculate gain error
-        error = self.target_snr - current_snr
-        
-        # PID-like control
-        gain_adjustment = error * 0.5
-        
-        # Limit adjustments
-        new_gain = current_gain + gain_adjustment
-        new_gain = max(0, min(40, new_gain))  # Clamp 0-40dB
-        
-        self.gain_history.append(new_gain)
-        
-        # Smoothing
-        if len(self.gain_history) > 5:
-            smoothed_gain = np.mean(self.gain_history[-5:])
-            return int(smoothed_gain)
-        
-        return int(new_gain)
-Safety Guidelines
-RF Safety
-yaml
-# RF exposure limits (FCC/ICNIRP)
-power_density:
-  general_public: "0.1 mW/cm²"
-  occupational: "1 mW/cm²"
+# tests/unit/test_detection_with_mock.py
+import pytest
+from infrastructure.hardware.mock_hardware import MockSDR
+from domain.services.detection_service import DetectionService
 
-# Safety distances for transmitter antennas
-min_distance:
-  "10W transmitter": "0.5m"
-  "100W transmitter": "2m"
-  "1000W transmitter": "6m"
+@pytest.mark.asyncio
+async def test_detection_pipeline():
+    """Test detection pipeline with mock hardware"""
+    
+    # Setup mock hardware
+    mock_sdr = MockSDR()
+    mock_sdr.initialize({
+        'mock_scenario': 'single_drone',
+        'drone_type': 'DJI Mavic 3'
+    })
+    
+    # Create detection service
+    detector = DetectionService(hardware=mock_sdr)
+    
+    # Process one frame
+    async for iq_samples in mock_sdr.start_stream():
+        detection = await detector.process_frame(iq_samples)
+        
+        # Assert detection was found
+        assert detection is not None
+        assert detection.drone_type == "DJI Mavic 3"
+        assert detection.confidence > 0.8
+        break
 
-# Precautionary measures:
-# - Always terminate unused SDR ports with 50Ω load
-# - Do not touch active antenna elements
-# - Verify transmitter power before connection
-# - Use RF safety interlock on high power systems
-Electrical Safety
+@pytest.mark.parametrize("scenario", [
+    "urban_low_density",
+    "urban_high_density", 
+    "multi_band",
+    "interference_heavy"
+])
+def test_scenarios(scenario):
+    """Test various mock scenarios"""
+    mock_sdr = MockSDR()
+    mock_sdr.initialize({'mock_scenario': scenario})
+    
+    # Run test suite
+    results = run_detection_tests(mock_sdr)
+    
+    assert results['detection_rate'] > 0.8
+    assert results['false_positive_rate'] < 0.1
+Integration Tests
+python
+# tests/integration/test_mock_pipeline.py
+async def test_full_pipeline_mock():
+    """Test complete pipeline with mock data"""
+    
+    # Setup
+    config = MockConfig.from_yaml("config/mock_config.yaml")
+    hardware = MockSDR(config.hardware)
+    api_client = TestClient(app)
+    
+    # Inject custom drone
+    hardware.inject_drone(
+        drone_type="Custom Drone",
+        frequency=2.45e9,
+        duration=30
+    )
+    
+    # Start detection
+    async with hardware.start_stream():
+        await asyncio.sleep(2)
+        
+        # Check API endpoint
+        response = await api_client.get("/api/v1/detections")
+        assert response.status_code == 200
+        
+        detections = response.json()['data']
+        assert len(detections) > 0
+        assert detections[0]['drone_type'] == "Custom Drone"
+Load Testing
+python
+# tests/performance/test_mock_load.py
+async def test_high_throughput_mock():
+    """Test system with high event rate using mock"""
+    
+    config = MockConfig(
+        drone_spawn_rate=10,  # 10 drones per second
+        max_drones=100,
+        event_rate=1000  # 1000 events/sec
+    )
+    
+    stats = await run_load_test(config, duration=60)
+    
+    assert stats['throughput'] > 900  # events/sec
+    assert stats['max_latency'] < 100  # ms
+    assert stats['error_rate'] < 0.01
+Mock Mode Scenarios
+Predefined Scenarios
+python
+# Access via API
+scenarios = {
+    "empty": {
+        "description": "No signals, clean spectrum",
+        "drones": [],
+        "noise_floor": -110
+    },
+    
+    "single_drone_2.4ghz": {
+        "description": "Single DJI drone at 2.4GHz",
+        "drones": [{
+            "type": "DJI Mavic 3",
+            "frequency": 2.45e9,
+            "power": -50,
+            "duration": 60
+        }]
+    },
+    
+    "single_drone_5.8ghz": {
+        "description": "Single FPV drone at 5.8GHz",
+        "drones": [{
+            "type": "FPV Digital",
+            "frequency": 5.8e9,
+            "power": -45,
+            "duration": 60
+        }]
+    },
+    
+    "multi_drone_mixed": {
+        "description": "Multiple drones on different bands",
+        "drones": [
+            {"type": "DJI Mavic 3", "frequency": 2.45e9, "power": -50},
+            {"type": "FPV Analog", "frequency": 5.8e9, "power": -45},
+            {"type": "Custom Building", "frequency": 2.45e9, "power": -55}
+        ]
+    },
+    
+    "interference": {
+        "description": "Drone with interference",
+        "interference_sources": [
+            {"type": "wifi", "power": -65, "bandwidth": 20e6},
+            {"type": "bluetooth", "power": -70, "bandwidth": 1e6},
+            {"type": "microwave", "power": -60, "bandwidth": 10e6}
+        ],
+        "drones": [{"type": "DJI Mini", "frequency": 2.45e9, "power": -60}]
+    },
+    
+    "tdoa_localization": {
+        "description": "Multi-receiver TDOA simulation",
+        "receivers": 3,
+        "drone_movement": {
+            "trajectory": "circle",
+            "radius": 500,
+            "speed": 10
+        }
+    }
+}
+Custom Scenario Creation
+python
+# Creating custom scenario programmatically
+from mock_scenario import MockScenarioBuilder
+
+builder = MockScenarioBuilder()
+builder.set_noise_floor(-100)
+builder.add_drone(
+    drone_type="Custom OFDM",
+    start_time=0,
+    duration=30,
+    frequency=2.45e9,
+    power=-50,
+    bandwidth=20e6,
+    movement={
+        "type": "linear",
+        "start": [37.7749, -122.4194, 100],
+        "end": [37.7755, -122.4185, 150],
+        "speed": 15
+    }
+)
+builder.add_interference(
+    type="wifi",
+    strength=-70,
+    channels=[1, 6, 11]
+)
+builder.set_schedule([
+    {"time": 0, "action": "start_drone", "drone_index": 0},
+    {"time": 15, "action": "increase_power", "drone_index": 0, "delta": 10},
+    {"time": 30, "action": "stop_drone", "drone_index": 0}
+])
+
+scenario = builder.build()
+scenario.save_to_file("custom_scenario.yaml")
+API Endpoints for Mock Control
+Mock Management API
 bash
-# Grounding requirements
-# - Resistance to ground: < 5 ohms
-# - Ground rod depth: 2.4m (8ft) minimum
-# - Bond all equipment to common ground point
+# Get mock status
+curl http://localhost:8888/api/v1/mock/status
 
-# Power protection
-# - Use surge protector on AC mains
-# - Install UPS with AVR
-# - Use isolation transformer for sensitive equipment
-# - Implement over-current protection
+# Response
+{
+  "enabled": true,
+  "active": true,
+  "current_scenario": "urban_low_density",
+  "active_drones": 3,
+  "total_detections_simulated": 1245,
+  "uptime_seconds": 3600
+}
 
-# Lightning safety
-# - Disconnect antennas during storms
-# - Install lightning arrestor at building entry
-# - Use gas discharge tubes on all coax lines
-# - Remove power during storm activity
-Procurement Guide
-Recommended Hardware Kits
+# Change scenario on-the-fly
+curl -X POST http://localhost:8888/api/v1/mock/scenario \
+  -H "Content-Type: application/json" \
+  -d '{"scenario": "urban_high_density"}'
+
+# Inject custom drone
+curl -X POST http://localhost:8888/api/v1/mock/inject \
+  -H "Content-Type: application/json" \
+  -d '{
+    "drone_type": "Test Drone",
+    "frequency": 2450000000,
+    "power": -45,
+    "duration": 30,
+    "trajectory": {
+      "type": "line",
+      "start": [37.7749, -122.4194],
+      "end": [37.7755, -122.4185]
+    }
+  }'
+
+# Simulate hardware error
+curl -X POST http://localhost:8888/api/v1/mock/error \
+  -H "Content-Type: application/json" \
+  -d '{"error_type": "disconnect", "duration": 5}'
+
+# Reset mock state
+curl -X POST http://localhost:8888/api/v1/mock/reset
+
+# Get available scenarios
+curl http://localhost:8888/api/v1/mock/scenarios
+WebSocket Control
+javascript
+// Control mock mode via WebSocket
+const ws = new WebSocket('ws://localhost:8888/api/v1/ws');
+
+ws.onopen = () => {
+  // Enable mock mode
+  ws.send(JSON.stringify({
+    type: "mock_command",
+    command: "enable",
+    config: {
+      scenario: "urban_high_density",
+      drone_count: 10
+    }
+  }));
+  
+  // Inject drone event
+  ws.send(JSON.stringify({
+    type: "mock_command",
+    command: "inject_drone",
+    data: {
+      drone_type: "Custom Drone",
+      confidence: 0.95
+    }
+  }));
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === "mock_event") {
+    console.log("Mock event:", data.event);
+  }
+};
+Debugging & Visualization
+Mock Mode Dashboard
+python
+# Access mock debug dashboard
+# http://localhost:8888/mock/debug
+
+# Features:
+# - Real-time spectrum visualization
+# - Drone positions on map
+# - Event timeline
+# - Hardware status simulation
+# - Scenario controls
+
+# API endpoints for debug data
+curl http://localhost:8888/api/v1/mock/debug/spectrum
+curl http://localhost:8888/api/v1/mock/debug/positions
+curl http://localhost:8888/api/v1/mock/debug/events?limit=100
+Logging Mock Operations
 yaml
-# Starter Kit (~$200)
-- 1x RTL-SDR v3 ($30)
-- 1x 2.4GHz patch antenna ($20)
-- 1x USB extension cable with ferrite ($10)
-- 1x SMA to MCX adapter ($5)
-Total: ~$65
+# config/logging.yaml - Mock-specific logging
+loggers:
+  mock_hardware:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+    
+  mock_generator:
+    level: INFO
+    handlers: [file]
+    
+handlers:
+  file:
+    class: logging.handlers.RotatingFileHandler
+    filename: /var/log/drone-detector/mock.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 10
+bash
+# View mock logs
+tail -f /var/log/drone-detector/mock.log
 
-# Professional Kit (~$500)
-- 1x HackRF One ($300)
-- 1x Wideband discone antenna ($80)
-- 1x LNA - 20dB gain ($40)
-- 1x 2.4GHz bandpass filter ($30)
-- 1x USB 3.0 extension cable ($15)
-- 1x SMA male to SMA male cable ($10)
-Total: ~$475
+# Example log entry
+2024-01-01 12:00:00 - mock_hardware - INFO - Mock SDR initialized
+2024-01-01 12:00:01 - mock_generator - DEBUG - Generating IQ data
+2024-01-01 12:00:02 - mock_hardware - INFO - Injected drone: DJI Mavic 3
+2024-01-01 12:00:03 - mock_hardware - DEBUG - Detection event triggered
+Performance Considerations
+Resource Usage
+yaml
+# Resource consumption in mock mode
+mock_resources:
+  cpu:
+    synthetic_generation: 5-15%
+    replay_mode: 2-5%
+    idle: <1%
+    
+  memory:
+    synthetic_generation: 100-500MB
+    replay_mode: 50-200MB
+    idle: 50MB
+    
+  disk:
+    replay_files: ~1GB per hour (compressed)
+    logs: ~10MB per hour
+Optimization Tips
+python
+# Optimize mock generation for high throughput
 
-# Enterprise Kit (~$2000)
-- 2x HackRF One with GPSDO ($800)
-- 2x Log-periodic antennas ($200)
-- 2x High-gain LNA 30dB ($100)
-- 2x Band-specific filters ($60)
-- 1x GPS disciplined oscillator ($300)
-- 1x 8-port power distribution ($80)
-- 1x Weatherproof enclosure ($100)
-- 1x Active USB 3.0 extender ($50)
-Total: ~$1690
+# Use numpy vectorization
+def generate_fast(samples, snr):
+    # Vectorized operations are much faster
+    noise = np.random.normal(0, 1, samples) + 1j * np.random.normal(0, 1, samples)
+    signal = generate_signal_vectorized(samples)
+    return signal + noise * (10 ** (-snr/20))
 
-# TDOA Localization Kit (~$5000)
-- 3x HackRF One with GPSDO ($1200)
-- 3x High-precision GPS antennas ($300)
-- 3x Directional antennas ($300)
-- 3x High-dynamic LNA ($150)
-- 1x Precision time server ($2000)
-- 3x Weatherproof enclosures ($300)
-- 1x Network switch ($150)
-- 3x Cat6 shielded cables ($150)
-Total: ~$4550
-Where to Buy
-Component	Suppliers
-HackRF	Great Scott Gadgets, Amazon, Mouser
-RTL-SDR	Amazon, AliExpress, Nooelec
-Antennas	L-Com, Pasternack, Taoglas
-LNAs	Mini-Circuits, RF Bay, eBay
-Cables	Belden, Times Microwave, Amphenol
-Enclosures	Bud Industries, Hammond, Polycase
+# Reduce sample rate when not needed
+config = {
+    'sample_rate': 1e6,  # Lower than real-time
+    'simulate_only_at_detection_rate': True
+}
+
+# Use pre-generated data when possible
+mock_sdr = MockSDR()
+mock_sdr.set_generation_mode("replay")  # Faster than synthetic
+CI/CD Integration
+GitHub Actions Example
+yaml
+# .github/workflows/test.yml
+name: Tests with Mock Mode
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+      - name: Run unit tests (mock mode)
+        run: |
+          export USE_MOCK_HARDWARE=true
+          pytest tests/unit/ -v --cov=app
+          
+      - name: Run integration tests (mock mode)
+        run: |
+          export USE_MOCK_HARDWARE=true
+          pytest tests/integration/ -v
+          
+      - name: Run performance tests (mock mode)
+        run: |
+          export USE_MOCK_HARDWARE=true
+          pytest tests/performance/ -v --benchmark-only
+Docker Compose for CI
+yaml
+# docker-compose.ci.yml
+version: '3.8'
+services:
+  api:
+    build: .
+    environment:
+      USE_MOCK_HARDWARE: "true"
+      MOCK_SCENARIO: "test_suite"
+    ports:
+      - "8888:8888"
+    command: >
+      sh -c "pytest tests/ -v --cov=app --cov-report=xml"
+Troubleshooting Mock Mode
+Common Issues
+bash
+# Issue: Mock mode not activating
+# Check configuration precedence:
+echo $USE_MOCK_HARDWARE  # Should be 'true'
+grep mock_mode config/system.yaml  # Should be 'true'
+
+# Issue: No detections in mock mode
+# Verify mock generator is producing signals
+curl http://localhost:8888/api/v1/mock/debug/spectrum | jq '.signal_present'
+
+# Issue: Performance issues in mock mode
+# Check for resource limits
+docker stats
+# Reduce drone count or sample rate
+export MOCK_MAX_DRONES=5
+export MOCK_SAMPLE_RATE=1000000
+
+# Issue: Replay files not found
+ls -la /app/data/iq/mock/
+# Check path in config
+grep source_dir config/mock_config.yaml
+Validation Tests
+python
+# scripts/validate_mock.py
+def validate_mock_setup():
+    """Validate mock mode configuration"""
+    
+    checks = [
+        ("Environment variable", os.getenv("USE_MOCK_HARDWARE") == "true"),
+        ("Config file", check_config_has_mock_mode()),
+        ("Mock SDR import", import_mock_sdr_success()),
+        ("Signal generation", test_signal_generation()),
+        ("Detection pipeline", test_detection_with_mock())
+    ]
+    
+    for check_name, passed in checks:
+        status = "✓" if passed else "✗"
+        print(f"{status} {check_name}")
+    
+    return all(passed for _, passed in checks)
+Best Practices
+Development Workflow
+Start Development in Mock Mode
+
+bash
+export USE_MOCK_HARDWARE=true
+python run.py --mock
+Test Changes Locally
+
+bash
+pytest tests/ --mock
+Validate with Recorded Data
+
+bash
+python scripts/record_live_for_mock.py
+python scripts/validate_mock_vs_live.py
+Gradually Add Hardware
+
+bash
+# Start with mock, transition to real hardware
+export USE_MOCK_HARDWARE=true
+export HARDWARE_TYPE=auto  # Will auto-detect if available
+Mock vs Real Hardware
+Aspect	Mock Mode	Real Hardware
+Development	Fast iteration	Hardware required
+Testing	Deterministic	Variable conditions
+CI/CD	Easy to automate	Difficult
+Performance	Predictable	Hardware-dependent
+Realism	Simulated	Actual RF environment
+Cost	Free	Hardware cost
+Debugging	Good visibility	Limited visibility
+Production Considerations
+yaml
+# Don't use mock mode in production unless:
+production_mock_use_cases:
+  - "Fallback when hardware fails"
+  - "Demo/display mode"
+  - "Load testing without RF"
+  - "Training environments"
+  
+  # Don't use for:
+  - "Actual drone detection"
+  - "Security-critical monitoring"
+  - "Legal/compliance recording"
+Example Scenarios
+Complete Mock Setup Example
+python
+# examples/mock_demo.py
+"""Complete mock mode demonstration"""
+
+import asyncio
+from drone_detector import DroneDetectorClient
+from infrastructure.hardware.mock_hardware import MockSDR
+
+async def mock_demo():
+    # Initialize mock hardware
+    mock_sdr = MockSDR()
+    mock_sdr.initialize({
+        'scenario': 'urban_high_density',
+        'drone_count': 5,
+        'duration': 60
+    })
+    
+    # Configure client
+    client = DroneDetectorClient(
+        base_url="http://localhost:8888",
+        mock_mode=True
+    )
+    
+    # Start detection
+    async for detection in client.stream_detections():
+        print(f"Detection: {detection.drone_type} at {detection.frequency}")
+        
+        # Inject new drone periodically
+        if detection.confidence > 0.9:
+            mock_sdr.inject_drone(
+                drone_type="High Confidence Drone",
+                duration=10
+            )
+        
+    # Get statistics
+    stats = await client.get_mock_stats()
+    print(f"Total detections: {stats['total_detections']}")
+    print(f"Detection rate: {stats['detections_per_second']}/sec")
+
+if __name__ == "__main__":
+    asyncio.run(mock_demo())
+This mock mode guide provides comprehensive documentation for using simulated hardware in the Drone Detector system, enabling development, testing, and validation without physical SDR equipment.
