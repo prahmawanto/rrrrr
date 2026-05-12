@@ -1,800 +1,1117 @@
-# Drone Detector System - Troubleshooting Guide
+# Drone Detector System - Security Considerations
 
 ## Overview
 
-This guide covers common issues, diagnostics, and solutions for the Drone Detector system. Use this document to identify and resolve problems quickly.
-
-## Quick Diagnostics
-
-### System Health Check
-
-```bash
-# Run complete system diagnostics
-python scripts/diagnostics.py
-
-# Quick health check
-curl http://localhost:8888/health
-
-# Check all services
-docker-compose ps
-
-# View recent errors
-tail -100 /var/log/drone-detector/system.log
-Diagnostic Script Output
-bash
-$ python scripts/diagnostics.py
-
-=== Drone Detector Diagnostics ===
-
-System Information:
-  OS: Ubuntu 22.04
-  Python: 3.11.5
-  Docker: 24.0.7
-  RAM: 15.6 GB
-  CPU: 8 cores
-
-Services Status:
-  ✓ API Server (Port 8888): Running
-  ✓ WebSocket (Port 8889): Running
-  ✓ PostgreSQL: Connected
-  ✓ Redis: Connected
-  ✓ MinIO: Connected
-
-Hardware Status:
-  ✓ HackRF One: Detected (SN: HACKRF000001, FW: 2023.01.1)
-  ✗ RTL-SDR: Not detected
-
-ML Model:
-  ✓ Model loaded: classifier_v2.pkl
-  ✓ Last training: 2024-01-15
-  ✓ Accuracy: 94.5%
-
-Recent Errors (last hour):
-  12:34:56 - WARNING - High CPU usage (85%)
-  12:45:23 - ERROR - Database connection timeout
-
-Recommendations:
-  - Reduce sample rate to lower CPU usage
-  - Check PostgreSQL connection settings
-Installation Issues
-Docker Installation Fails
-bash
-# Problem: Docker daemon not running
-sudo systemctl status docker
-sudo systemctl start docker
-
-# Problem: Permission denied
-sudo usermod -aG docker $USER
-# Log out and back in
-
-# Problem: Port conflicts
-sudo netstat -tulpn | grep -E '8888|8889|5432|6379'
-# Change ports in docker-compose.yml
-
-# Problem: Out of memory
-docker system prune -a
-# Increase memory limit in Docker Desktop
-Python Environment Issues
-bash
-# Problem: Virtual environment not activating
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Problem: Missing dependencies
-pip install -r requirements.txt --upgrade
-pip install -r requirements-dev.txt
-
-# Problem: Conflicting packages
-pip freeze | grep -i drone
-pip uninstall drone-detector
-pip install -e .
-
-# Problem: Python version mismatch
-python --version  # Need 3.11+
-pyenv install 3.11.5
-pyenv local 3.11.5
-SDR Driver Issues
-bash
-# Problem: HackRF not detected
-lsusb | grep HackRF
-sudo hackrf_info
-sudo modprobe hackrf
-sudo systemctl restart udev
-
-# Problem: RTL-SDR not detected
-lsusb | grep RTL
-sudo rtl_test -t
-# Blacklist DVB-T driver
-sudo tee /etc/modprobe.d/rtl-sdr-blacklist.conf << EOF
-blacklist dvb_usb_rtl28xxu
-blacklist rtl2832
-blacklist rtl2830
-EOF
-sudo reboot
-
-# Problem: Permission denied
-sudo usermod -a -G plugdev $USER
-sudo usermod -a -G dialout $USER
-# Create udev rules
-sudo tee /etc/udev/rules.d/99-sdr.rules << EOF
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6089", MODE="0666"
-SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE="0666"
-EOF
-sudo udevadm control --reload-rules
-sudo udevadm trigger
-Hardware Issues
-SDR Not Detected
-bash
-# Diagnostic steps
-# 1. Check USB connection
-lsusb
-dmesg | tail -20
-
-# 2. Check driver loading
-lsmod | grep -E "hackrf|rtl"
-sudo modprobe hackrf
-
-# 3. Test device
-hackrf_info
-rtl_test -t
-
-# 4. Check USB bandwidth
-cat /sys/kernel/debug/usb/devices | grep -A 10 "HackRF"
-
-# Solution: USB port issues
-# - Try different USB port
-# - Use powered USB hub
-# - Use shorter USB cable
-# - Disable USB auto-suspend
-Poor Signal Quality
-bash
-# Problem: Low SNR
-# Check antenna connection
-# Verify antenna is appropriate for frequency
-# Check LNA power
-# Adjust gain settings
-
-# Problem: Interference
-# Identify interference sources
-rtl_power -f 0:6e9:1M -g 20 -i 1 -1 interference.csv
-python scripts/analyze_interference.py interference.csv
-
-# Solutions
-# - Move antenna away from noise sources
-# - Add bandpass filters
-# - Use shielded cables
-# - Change operating frequency
-
-# Problem: Signal distortion
-# Check for overload
-hackrf_info | grep "Gain"
-# Reduce gain if > 30dB
-# Check antenna VSWR
-Hardware Overheating
-bash
-# Check temperature
-hackrf_info | grep Temperature
-# Should be < 60°C
-
-# Solutions
-# - Add heatsink
-# - Install cooling fan
-# - Reduce sample rate
-# - Reduce gain
-# - Improve ventilation
-
-# Monitor temperature
-watch -n 1 'hackrf_info | grep Temperature'
-
-# Automatic cooling script
-#!/bin/bash
-while true; do
-    TEMP=$(hackrf_info | grep Temperature | awk '{print $2}')
-    if [ $TEMP -gt 60 ]; then
-        echo "High temperature detected: ${TEMP}°C"
-        # Reduce gain or sample rate
-    fi
-    sleep 10
-done
-Software Issues
-API Server Won't Start
-bash
-# Check logs
-docker-compose logs api
-# or
-journalctl -u drone-api -f
-
-# Common issues
-# Port already in use
-sudo lsof -i :8888
-sudo kill -9 <PID>
-
-# Configuration error
-python -c "import yaml; yaml.safe_load(open('config/system.yaml'))"
-
-# Database connection failed
-psql -h localhost -U drone_user -d drone_detector -c "SELECT 1"
-
-# Fix database
-docker-compose restart postgres
-python scripts/migrate.py upgrade head
-
-# Environment variables missing
-cat .env
-cp .env.example .env
-# Edit .env with correct values
-WebSocket Connection Fails
-bash
-# Check WebSocket endpoint
-wscat -c ws://localhost:8889
-
-# Browser console errors
-# Check CORS settings in config/system.yaml
-cors:
-  allowed_origins:
-    - "http://localhost:3000"
-    - "https://your-domain.com"
-
-# Check nginx configuration
-# WebSocket requires:
-proxy_set_header Upgrade $http_upgrade;
-proxy_set_header Connection "upgrade";
-
-# Increase timeout in nginx
-proxy_read_timeout 3600s;
-proxy_send_timeout 3600s;
-Database Issues
-bash
-# Problem: Connection refused
-sudo systemctl status postgresql
-netstat -tulpn | grep 5432
-
-# Problem: Database not initialized
-createdb -U postgres drone_detector
-psql -U postgres -d drone_detector -f schema.sql
-
-# Problem: Migration failed
-python scripts/migrate.py current
-python scripts/migrate.py downgrade -1
-python scripts/migrate.py upgrade head
-
-# Problem: Slow queries
-# Enable query logging
-ALTER SYSTEM SET log_min_duration_statement = 1000;
-SELECT pg_reload_conf();
-
-# Analyze query performance
-EXPLAIN ANALYZE SELECT * FROM detections WHERE timestamp > now() - interval '1 day';
-
-# Create missing indexes
-CREATE INDEX CONCURRENTLY idx_detections_timestamp ON detections(timestamp);
-CREATE INDEX CONCURRENTLY idx_detections_drone_type ON detections(drone_type);
-Redis Issues
-bash
-# Problem: Redis connection failed
-redis-cli ping
-sudo systemctl status redis-server
-
-# Problem: Memory full
-redis-cli INFO memory
-redis-cli CONFIG SET maxmemory 2gb
-redis-cli CONFIG SET maxmemory-policy allkeys-lru
-
-# Problem: Slow operations
-redis-cli --latency
-redis-cli SLOWLOG GET 10
-
-# Clear cache
-redis-cli FLUSHALL
-
-# Check Redis keys
-redis-cli KEYS "drone:*"
-redis-cli TYPE "drone:detection:123"
-MinIO Issues
-bash
-# Problem: Cannot connect
-mc alias set local http://localhost:9000 minioadmin minioadmin123
-mc admin info local
-
-# Problem: Bucket not found
-mc mb local/iq-recordings
-mc mb local/spectrum-data
-mc mb local/exports
-
-# Problem: Permission denied
-mc policy set download local/exports
-mc policy set private local/iq-recordings
-
-# Problem: Disk full
-mc admin disk usage local
-# Clean old files
-mc rm --recursive --older-than 30d local/iq-recordings/
-Detection Issues
-No Detections
-bash
-# Check if hardware is working
-hackrf_transfer -r /dev/null -f 2450000000 -s 2000000 -n 1000000
-
-# Check noise floor
-python scripts/check_noise_floor.py
-# Should be < -80 dBm
-
-# Increase sensitivity
-# Lower detection threshold
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"detection":{"threshold":5}}'
-
-# Enable mock mode for testing
-export USE_MOCK_HARDWARE=true
-python run.py --test
-
-# Check logs for errors
-tail -f /var/log/drone-detector/detection.log
-
-# Verify frequency band
-# DJI drones operate at 2.4GHz or 5.8GHz
-# Ensure center frequency is correct
-curl http://localhost:8888/api/v1/hardware/status | grep center_frequency
-False Positives
-bash
-# Problem: Wi-Fi interference
-# Add Wi-Fi filter or change channel
-# Increase detection threshold
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"detection":{"threshold":15}}'
-
-# Problem: RF noise
-# Identify noise source
-python scripts/identify_noise.py --duration 60
-# Move antenna away from noise
-# Add shielding
-
-# Problem: Too sensitive
-# Adjust peak detection
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"detection":{"peak_threshold":10,"min_confidence":0.8}}'
-
-# Enable machine learning filtering
-curl -X POST http://localhost:8888/api/v1/ml/filter/enable
-
-# Review false positives
-python scripts/analyze_detections.py --type false_positive
-Missed Detections
-bash
-# Problem: Signal too weak
-# Increase gain
-curl -X PUT http://localhost:8888/api/v1/hardware/gain/30
-
-# Add LNA between antenna and SDR
-# Use higher gain antenna
-
-# Problem: Frequency drift
-# Recalibrate SDR
-hackrf_cal -f 2450000000 -g 20
-
-# Problem: Fast moving drone
-# Increase scan rate
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"detection":{"update_interval_ms":50}}'
-
-# Enable TDOA tracking
-curl -X POST http://localhost:8888/api/v1/tdoa/enable
-
-# Problem: New drone type not in database
-# Update signature database
-python scripts/update_drone_signatures.py
-Performance Issues
-High CPU Usage
-bash
-# Identify CPU usage
-top -o %CPU
-htop
-
-# Check process CPU
-ps aux | grep python | grep -E "api|worker"
-
-# Reduce sample rate
-curl -X PUT http://localhost:8888/api/v1/hardware/sample_rate/1000000
-
-# Reduce FFT size
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"processing":{"fft_size":512}}'
-
-# Scale worker processes
-docker-compose up -d --scale worker=2
-
-# Enable GPU acceleration
-export USE_GPU=true
-python run.py --gpu
-
-# Profile CPU usage
-python -m cProfile -o profile.stats run.py
-python -m pstats profile.stats
-Memory Leaks
-bash
-# Monitor memory usage
-watch -n 1 'ps aux --sort=-%mem | head -10'
-
-# Check Python memory
-pip install memory-profiler
-mprof run python run.py
-mprof plot
-
-# Check for memory leaks
-# Restart services weekly via cron
-0 3 * * 0 docker-compose restart api worker
-
-# Set memory limits in docker
-# docker-compose.yml
-services:
-  api:
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-
-# Reduce cache sizes
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"cache":{"detection_cache_size":1000,"spectrum_history":100}}'
-
-# Clear caches
-curl -X POST http://localhost:8888/api/v1/cache/clear
-Slow Response Time
-bash
-# Measure API latency
-curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8888/api/v1/detections
-
-# Check database query performance
-# Enable slow query logging in PostgreSQL
-# Optimize indexes
-
-# Increase worker count
-export GUNICORN_WORKERS=8
-docker-compose up -d --scale api=3
-
-# Enable response compression
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"api":{"compression":true}}'
-
-# Implement caching
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"cache":{"enabled":true,"ttl_seconds":60}}'
-
-# Profile API endpoints
-pip install apache-bench
-ab -n 1000 -c 10 http://localhost:8888/api/v1/detections
-Disk Space Issues
-bash
-# Check disk usage
-df -h
-du -sh /app/data/*
-
-# Clean old data
-python scripts/cleanup.py --days 30
-
-# Configure retention policies
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"data_retention":{
-    "detections_days":30,
-    "recordings_days":7,
-    "spectrum_days":1
-  }}'
-
-# Compress old IQ data
-find /app/data/iq -name "*.iq" -mtime +7 -exec gzip {} \;
-
-# Move to external storage
-aws s3 sync /app/data/iq s3://drone-backups/iq/
-rm -rf /app/data/iq/old-*
-
-# Configure log rotation
-# /etc/logrotate.d/drone-detector
-/var/log/drone-detector/*.log {
-    daily
-    rotate 7
-    compress
-    delaycompress
-    missingok
-    notifempty
-    create 0640 drone drone
-}
-Network Issues
-WebSocket Disconnections
-bash
-# Check WebSocket stability
-wscat -c ws://localhost:8889 --keepalive=30
-
-# Increase timeout values
-# nginx configuration
-proxy_read_timeout 3600s;
-proxy_send_timeout 3600s;
-proxy_connect_timeout 75s;
-
-# Client-side reconnect logic
-function connectWebSocket() {
-    ws = new WebSocket(url);
-    ws.onclose = function() {
-        setTimeout(connectWebSocket, 1000);
-    };
-}
-
-# Check network stability
-ping -c 100 google.com | grep loss
-
-# Use stable internet connection
-# Consider using wired instead of WiFi
-API Timeouts
-bash
-# Increase timeout
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"api":{"timeout_seconds":120}}'
-
-# For large queries, use pagination
-curl "http://localhost:8888/api/v1/detections?limit=100&offset=0"
-
-# For exports, use async endpoint
-curl -X POST http://localhost:8888/api/v1/exports/detections \
-  -d '{"start_time":"2024-01-01","format":"csv"}'
-# Poll status endpoint for completion
-
-# Check network latency
-mtr google.com
-
-# Optimize for slow networks
-# Enable compression
-# Reduce response size
-# Use protobuf instead of JSON
-Remote ID Issues
-No Remote ID Detections
-bash
-# Check Bluetooth adapter
-hciconfig -a
-sudo hciconfig hci0 up
-
-# Scan for BLE devices
-sudo hcitool lescan
-
-# Check Wi-Fi monitor mode
-sudo iwconfig wlan0 mode monitor
-sudo ip link set wlan0 up
-
-# Verify Remote ID configuration
-cat config/remote_id.yaml | grep enabled
-
-# Check RSSI threshold
-# Lower threshold to detect weaker signals
-curl -X PUT http://localhost:8888/api/v1/remote-id/config \
-  -d '{"bluetooth":{"min_rssi":-90}}'
-
-# Test with known Remote ID drone
-# Use DJI drone with Remote ID enabled in app
-Invalid Remote ID Data
-bash
-# Check message decoding
-python scripts/decode_rid.py --capture /tmp/rid_capture.pcap
-
-# Validate against ASTM F3411-22 spec
-# Check for spoofing attempts
-python scripts/detect_rid_spoofing.py
-
-# Update Remote ID database
-python scripts/update_rid_database.py
-
-# Check time synchronization
-timedatectl status
-# Ensure NTP is enabled
-sudo timedatectl set-ntp true
-ML Model Issues
-Low Detection Accuracy
-bash
-# Evaluate model performance
-python scripts/evaluate_model.py --model models/classifier.pkl
-
-# Check for class imbalance
-python scripts/analyze_dataset.py --check-imbalance
-
-# Retrain with more data
-python scripts/train_model.py --epochs 100 --data /path/to/new/data
-
-# Enable ensemble predictions
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"ml":{"ensemble":true}}'
-
-# Adjust confidence threshold
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"detection":{"min_confidence":0.7}}'
-
-# Collect new training data for problematic drone types
-python scripts/collect_training_data.py --drone-type DJI_Mavic --duration 300
-Model Loading Fails
-bash
-# Check model file exists
-ls -la models/classifier.pkl
-
-# Verify model compatibility
-python -c "import joblib; model = joblib.load('models/classifier.pkl')"
-
-# Re-export model
-python scripts/export_model.py --input models/classifier_v1.pkl --output models/classifier.pkl
-
-# Check scikit-learn version
-pip show scikit-learn
-# May need to retrain if version mismatch
-
-# Fallback to default model
-cp models/classifier_default.pkl models/classifier.pkl
-Security Issues
-Unauthorized Access
-bash
-# Check authentication logs
-tail -f /var/log/drone-detector/auth.log
-
-# Enable rate limiting
-curl -X PUT http://localhost:8888/api/v1/config \
-  -d '{"security":{"rate_limit":100,"rate_limit_window":60}}'
-
-# Update JWT secret
-echo "SECRET_KEY=$(openssl rand -base64 32)" >> .env
-docker-compose restart api
-
-# Check for brute force attempts
-sudo fail2ban-client status drone-detector
-
-# Revoke suspicious tokens
-python scripts/revoke_tokens.py --user suspicious_user
-SSL/TLS Issues
-bash
-# Check certificate expiration
-openssl x509 -in /etc/ssl/certs/drone-detector.crt -text -noout
-
-# Renew certificate
-sudo certbot renew
-
-# Verify SSL configuration
-sslscan localhost:443
-
-# Test SSL connection
-openssl s_client -connect localhost:443 -servername drone.detector.local
-
-# Fix certificate chain
-cat domain.crt intermediate.crt root.crt > fullchain.crt
-Troubleshooting Tools
-Built-in Tools
-bash
-# Comprehensive diagnostics
-python scripts/diagnostics.py --verbose
-
-# Hardware testing
-python scripts/test_hardware.py --device hackrf --test all
-
-# Network testing
-python scripts/test_network.py --endpoint localhost:8888 --test all
-
-# Database repair
-python scripts/repair_database.py --check --fix
-
-# Log analysis
-python scripts/analyze_logs.py --level ERROR --hours 24
-
-# Performance profiling
-python scripts/profile_system.py --duration 60 --output report.html
-Monitoring Commands
-bash
-# Real-time monitoring
-watch -n 1 'curl -s http://localhost:8888/metrics | grep -E "detection|cpu|memory"'
-
-# Docker monitoring
-docker stats --no-stream
-docker events --filter event=health_status
-
-# System monitoring
-htop
-nvidia-smi  # GPU status
-iostat -x 1  # Disk I/O
-
-# Log tailing
-tail -f /var/log/drone-detector/{system,detection,api,hardware}.log
-
-# Network monitoring
-iftop
-nethogs
-sudo tcpdump -i eth0 port 8888
-Logging Configuration
-yaml
-# config/logging.yaml - Enable debug logging
-version: 1
-handlers:
-  console:
-    class: logging.StreamHandler
-    level: DEBUG
-  file:
-    class: logging.handlers.RotatingFileHandler
-    level: DEBUG
-    filename: /var/log/drone-detector/debug.log
+This document outlines security considerations, best practices, and implementation guidelines for the Drone Detector system. Security is paramount in drone detection as it involves surveillance, data collection, and potential integration with security systems.
+
+## Security Architecture
+
+### Defense in Depth
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Security Layers │
+│ │
+│ Layer 1: Physical Security │
+│ ├── Hardware access controls │
+│ ├── Tamper detection │
+│ └── Secure facility placement │
+│ │
+│ Layer 2: Network Security │
+│ ├── Firewall rules │
+│ ├── VLAN isolation │
+│ ├── TLS 1.3 encryption │
+│ └── Rate limiting │
+│ │
+│ Layer 3: Application Security │
+│ ├── Authentication & Authorization │
+│ ├── Input validation │
+│ ├── SQL injection prevention │
+│ ├── XSS protection │
+│ └── CSRF tokens │
+│ │
+│ Layer 4: Data Security │
+│ ├── Encryption at rest (AES-256) │
+│ ├── Encryption in transit (TLS) │
+│ ├── Key management │
+│ └── Data masking │
+│ │
+│ Layer 5: Operational Security │
+│ ├── Audit logging │
+│ ├── Monitoring & alerting │
+│ ├── Incident response │
+│ └── Regular updates │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+text
+
+### Threat Model
+
+| Threat | Impact | Likelihood | Mitigation |
+|--------|--------|------------|------------|
+| Unauthorized access | High | Medium | Authentication, RBAC, MFA |
+| Data breach | High | Low | Encryption, access controls |
+| DoS attack | Medium | Medium | Rate limiting, load balancing |
+| Spoofing | High | Medium | Signal validation, ML filtering |
+| Eavesdropping | Medium | Low | TLS encryption |
+| Man-in-the-middle | High | Low | Certificate validation |
+| Hardware tampering | High | Low | Tamper detection, secure enclaves |
+| Insider threat | Medium | Low | Audit logs, least privilege |
+
+## Authentication & Authorization
+
+### API Authentication
+
+```yaml
+# config/security.yaml
+authentication:
+  # JWT Configuration
+  jwt:
+    enabled: true
+    algorithm: RS256  # Use RSA for production
+    access_token_expiry: 3600  # 1 hour
+    refresh_token_expiry: 86400  # 24 hours
+    issuer: "drone-detector.example.com"
+    audience: ["drone-api", "drone-websocket"]
     
-loggers:
-  drone_detector:
-    level: DEBUG
-    handlers: [console, file]
-  infrastructure.hardware:
-    level: DEBUG
-  domain.services:
-    level: DEBUG
-Recovery Procedures
-Service Recovery
+  # API Keys
+  api_keys:
+    enabled: true
+    prefix: "dk_live_"
+    length: 32
+    hash_algorithm: sha256
+    
+  # OAuth2 / OIDC
+  oauth2:
+    enabled: false
+    providers:
+      - google
+      - microsoft
+      - okta
+    allow_existing_users: true
+    
+  # Multi-factor Authentication
+  mfa:
+    enabled: true
+    methods:
+      - totp  # Google Authenticator
+      - sms
+      - email
+    required_for_roles: ["admin", "operator"]
+Role-Based Access Control (RBAC)
+yaml
+# config/rbac.yaml
+roles:
+  viewer:
+    permissions:
+      - detections:read
+      - map:view
+      - alerts:view
+    mfa_required: false
+    
+  operator:
+    permissions:
+      - detections:read
+      - detections:export
+      - alerts:acknowledge
+      - recordings:play
+      - hardware:view
+    mfa_required: false
+    
+  analyst:
+    permissions:
+      - detections:*  # All detection permissions
+      - analytics:*
+      - reports:generate
+      - ml:view
+    mfa_required: true
+    
+  admin:
+    permissions:
+      - *  # All permissions
+    mfa_required: true
+    ip_whitelist:
+      - "10.0.0.0/8"
+      - "192.168.0.0/16"
+      
+  auditor:
+    permissions:
+      - logs:read
+      - audit:*
+    read_only: true
+    mfa_required: true
+Authentication Implementation
+python
+# infrastructure/auth/jwt_auth.py
+import jwt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
+class JWTAuthenticator:
+    """JWT-based authentication with RSA signing"""
+    
+    def __init__(self):
+        # Load RSA private key
+        with open("config/private_key.pem", "rb") as f:
+            self.private_key = serialization.load_pem_private_key(
+                f.read(),
+                password=None,
+                backend=default_backend()
+            )
+            
+        # Load RSA public key
+        with open("config/public_key.pem", "rb") as f:
+            self.public_key = serialization.load_pem_public_key(
+                f.read(),
+                backend=default_backend()
+            )
+            
+    def create_token(self, user_id: str, role: str, expiry: int = 3600) -> str:
+        """Create JWT token with claims"""
+        payload = {
+            "sub": user_id,
+            "role": role,
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=expiry),
+            "jti": str(uuid.uuid4()),
+            "iss": "drone-detector.example.com"
+        }
+        
+        token = jwt.encode(
+            payload,
+            self.private_key,
+            algorithm="RS256"
+        )
+        return token
+    
+    def verify_token(self, token: str) -> dict:
+        """Verify and decode JWT token"""
+        try:
+            payload = jwt.decode(
+                token,
+                self.public_key,
+                algorithms=["RS256"],
+                issuer="drone-detector.example.com"
+            )
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationError("Token expired")
+        except jwt.InvalidTokenError as e:
+            raise AuthenticationError(f"Invalid token: {e}")
+Data Security
+Encryption at Rest
+python
+# infrastructure/encryption/data_encryption.py
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+import base64
+
+class DataEncryption:
+    """Encrypt sensitive data at rest"""
+    
+    def __init__(self, master_key: bytes):
+        # Derive encryption key from master key
+        kdf = PBKDF2(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=self._get_salt(),
+            iterations=100000,
+        )
+        self.key = base64.urlsafe_b64encode(kdf.derive(master_key))
+        self.cipher = Fernet(self.key)
+        
+    def encrypt_sensitive_data(self, data: dict) -> bytes:
+        """Encrypt sensitive fields"""
+        sensitive_fields = [
+            "operator_contact",
+            "operator_address",
+            "remote_id_key",
+            "authentication_data"
+        ]
+        
+        encrypted_data = {}
+        for key, value in data.items():
+            if key in sensitive_fields:
+                encrypted_data[key] = self.cipher.encrypt(
+                    json.dumps(value).encode()
+                )
+            else:
+                encrypted_data[key] = value
+                
+        return encrypted_data
+    
+    def decrypt_data(self, encrypted_data: bytes) -> dict:
+        """Decrypt previously encrypted data"""
+        decrypted = self.cipher.decrypt(encrypted_data)
+        return json.loads(decrypted)
+    
+    def encrypt_iq_data(self, iq_samples: np.ndarray) -> bytes:
+        """Encrypt raw IQ samples"""
+        # Compress and encrypt
+        compressed = zlib.compress(iq_samples.tobytes())
+        return self.cipher.encrypt(compressed)
+Database Encryption
+sql
+-- PostgreSQL column encryption
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Encrypt sensitive columns
+CREATE TABLE operators (
+    id UUID PRIMARY KEY,
+    operator_id VARCHAR(50) UNIQUE,
+    contact_email VARCHAR(100) ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY=cek1),
+    contact_phone VARCHAR(20) ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY=cek1),
+    address TEXT ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY=cek1),
+    created_at TIMESTAMP
+);
+
+-- Transparent Data Encryption (TDE)
+ALTER SYSTEM SET encrypted = 'on';
+ALTER SYSTEM SET encryption_key = '/secure/key/path';
+
+-- Tablespace encryption
+CREATE TABLESPACE secure_ts LOCATION '/secure/data' WITH (encryption = on);
+Encryption in Transit
+nginx
+# nginx SSL configuration
+ssl_protocols TLSv1.3;
+ssl_ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+ssl_prefer_server_ciphers off;
+ssl_session_timeout 1d;
+ssl_session_cache shared:SSL:50m;
+ssl_session_tickets off;
+
+# HSTS
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+# OCSP stapling
+ssl_stapling on;
+ssl_stapling_verify on;
+ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+Network Security
+Firewall Configuration
 bash
-# Restart specific service
-docker-compose restart api
-sudo systemctl restart drone-api
+# UFW configuration
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
 
-# Full system restart
-docker-compose down
-docker-compose up -d
+# Allow SSH (restricted)
+sudo ufw allow from 10.0.0.0/8 to any port 22
 
-# Database recovery
-# Restore from backup
-gunzip -c backups/drone_db_20240101.sql.gz | psql -U drone_user drone_detector
+# Allow API access (restricted)
+sudo ufw allow from 192.168.0.0/16 to any port 8888 proto tcp
 
-# Configuration recovery
-cp config/system.yaml.bak config/system.yaml
-docker-compose restart
+# Allow WebSocket (restricted)
+sudo ufw allow from 192.168.0.0/16 to any port 8889 proto tcp
 
-# Hardware recovery
-sudo modprobe -r hackrf
-sudo modprobe hackrf
-sudo systemctl restart udev
-Emergency Procedures
+# Allow monitoring (internal only)
+sudo ufw allow from 127.0.0.1 to any port 9090 proto tcp
+
+# Rate limiting
+sudo ufw limit ssh
+sudo ufw limit 8888/tcp
+
+# Enable logging
+sudo ufw logging on
+
+sudo ufw enable
+Network Isolation
+yaml
+# docker-compose.yml network isolation
+networks:
+  frontend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+    internal: false
+    
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+    internal: true  # No external access
+    
+  database:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.3.0/24
+    internal: true
+
+services:
+  nginx:
+    networks:
+      - frontend
+      - backend
+      
+  api:
+    networks:
+      - backend
+      - database
+      
+  postgres:
+    networks:
+      - database
+      
+  redis:
+    networks:
+      - database
+VPN Configuration
 bash
-# Emergency shutdown
-curl -X POST http://localhost:8888/api/v1/system/shutdown
+# WireGuard VPN for secure remote access
+# /etc/wireguard/wg0.conf
+[Interface]
+Address = 10.0.4.1/24
+PrivateKey = <server_private_key>
+ListenPort = 51820
 
-# Force stop
-docker-compose down --remove-orphans
-pkill -f "python.*drone"
+[Peer]
+PublicKey = <client_public_key>
+AllowedIPs = 10.0.4.2/32
 
-# Safe mode startup
-python run.py --safe-mode --mock
+# Client configuration
+[Interface]
+Address = 10.0.4.2/24
+PrivateKey = <client_private_key>
+DNS = 8.8.8.8
 
-# Data preservation
-tar -czf emergency_backup_$(date +%Y%m%d).tar.gz /app/data/ /app/config/
+[Peer]
+PublicKey = <server_public_key>
+Endpoint = vpn.drone-detector.com:51820
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+API Security
+Input Validation
+python
+# api/validation.py
+from pydantic import BaseModel, Field, validator
+from typing import Optional
 
-# Contact support
-python scripts/collect_debug_info.py --output debug_info_$(date +%Y%m%d).tar.gz
-Getting Help
-Self-Help Resources
-Documentation: https://docs.drone-detector.com
+class DetectionQuery(BaseModel):
+    """Validation for detection query parameters"""
+    
+    start_time: datetime
+    end_time: datetime
+    frequency_min: Optional[float] = Field(None, ge=70e6, le=6e9)
+    frequency_max: Optional[float] = Field(None, ge=70e6, le=6e9)
+    drone_type: Optional[str] = Field(None, min_length=1, max_length=50)
+    confidence_min: Optional[float] = Field(None, ge=0.0, le=1.0)
+    
+    @validator('end_time')
+    def validate_time_range(cls, v, values):
+        if 'start_time' in values and v <= values['start_time']:
+            raise ValueError('end_time must be after start_time')
+        return v
+    
+    @validator('frequency_max')
+    def validate_frequency_range(cls, v, values):
+        if v and 'frequency_min' in values:
+            if v <= values['frequency_min']:
+                raise ValueError('frequency_max must be > frequency_min')
+        return v
 
-FAQ: https://docs.drone-detector.com/faq
+class HardwareConfig(BaseModel):
+    """Validation for hardware configuration"""
+    
+    sample_rate: int = Field(..., ge=1e5, le=56e6)
+    center_frequency: float = Field(..., ge=70e6, le=6e9)
+    gain: int = Field(..., ge=0, le=40)
+    
+    @validator('sample_rate')
+    def validate_sample_rate(cls, v):
+        # Validate against hardware capabilities
+        if v > 20e6:
+            raise ValueError('Sample rate exceeds HackRF limit (20MHz)')
+        return v
+Rate Limiting
+python
+# api/middleware/rate_limit.py
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
 
-Knowledge Base: https://support.drone-detector.com
+limiter = Limiter(key_func=get_remote_address)
 
-Community Forum: https://community.drone-detector.com
+# Apply to endpoints
+@app.get("/api/v1/detections")
+@limiter.limit("100/minute")
+async def get_detections(request: Request):
+    return await detection_service.list()
 
-Support Channels
+# Per-user limits
+@limiter.limit(lambda request: f"{get_user_rate_limit(request)}/minute")
+
+# Burst limits
+@limiter.limit("10/second", burst=True)
+
+# Custom limits for admin
+class RateLimitConfig:
+    default = "100/minute"
+    authenticated = "1000/minute"
+    admin = "5000/minute"
+    export = "10/hour"
+    auth = "5/minute"
+Request Validation
+python
+# api/middleware/security.py
+from fastapi import Request, HTTPException
+
+class SecurityMiddleware:
+    """Additional security checks"""
+    
+    async def validate_request(self, request: Request):
+        # Check origin
+        origin = request.headers.get("origin")
+        if origin and origin not in ALLOWED_ORIGINS:
+            raise HTTPException(403, "Origin not allowed")
+            
+        # Check content type
+        content_type = request.headers.get("content-type")
+        if request.method in ["POST", "PUT", "PATCH"]:
+            if content_type != "application/json":
+                raise HTTPException(415, "Content-Type must be application/json")
+                
+        # Check request size
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_REQUEST_SIZE:
+            raise HTTPException(413, "Request too large")
+            
+        # Validate query parameters
+        # No SQL injection patterns
+        for key, value in request.query_params.items():
+            if self._contains_sql_injection(value):
+                raise HTTPException(400, "Invalid query parameter")
+Hardware Security
+Secure Boot & Trusted Platform Module (TPM)
 bash
-# Generate support bundle
-python scripts/support_bundle.py --output support_bundle.tar.gz
+# Enable Secure Boot in BIOS
+# Verify Secure Boot status
+bootctl status
 
-# Attach to support ticket
-# Includes:
-# - Logs (last 7 days)
-# - Configuration files
-# - Hardware info
-# - System metrics
-# - Database schema
-Reporting Issues
-When reporting issues, include:
+# Setup TPM for key storage
+sudo apt install tpm2-tools
 
-Description: What happened and expected behavior
+# Initialize TPM
+sudo tpm2_startup
+sudo tpm2_clear
 
-Steps to reproduce: Exact commands/actions
+# Create RSA key in TPM
+sudo tpm2_createprimary -C o -G rsa -c primary.ctx
+sudo tpm2_create -C primary.ctx -G rsa -u key.pub -r key.priv
 
-System info: OS, Python version, hardware
+# Store secrets in TPM
+echo "database_password" | sudo tpm2_encrypt -c key.ctx -o encrypted.key
 
-Logs: Relevant log excerpts
+# Seal data to PCR state
+sudo tpm2_createpolicy --policy-pcr -l sha256:0,1,2,3 -L policy.dat
+sudo tpm2_create -C primary.ctx -L policy.dat -u key.pub -r key.priv
+Anti-Tamper Measures
+python
+# hardware/anti_tamper.py
+class AntiTamperMonitor:
+    """Monitor for hardware tampering"""
+    
+    def __init__(self):
+        self.tamper_pins = [4, 17, 27]  # GPIO pins
+        self.enclosure_switch = 22
+        self.temperature_sensor = "tmp102"
+        
+    def setup(self):
+        """Initialize tamper detection"""
+        for pin in self.tamper_pins:
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            
+        GPIO.setup(self.enclosure_switch, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        
+        # Register interrupt handlers
+        GPIO.add_event_detect(self.enclosure_switch, GPIO.FALLING,
+                             callback=self._on_tamper_detected)
+                             
+    def _on_tamper_detected(self, channel):
+        """Handle tamper event"""
+        # Log event
+        logging.critical(f"Tamper detected on pin {channel}")
+        
+        # Clear sensitive data
+        self._clear_secrets()
+        
+        # Send alert
+        self._send_alert(tamper_type="enclosure_opened")
+        
+        # Disable hardware
+        self._disable_hardware()
+        
+    def _clear_secrets(self):
+        """Clear sensitive data from memory"""
+        # Overwrite encryption keys
+        # Clear authentication tokens
+        # Reset secure storage
+        pass
+Physical Security Checklist
+yaml
+physical_security:
+  server_room:
+    - Access controlled with biometric/MFA
+    - 24/7 CCTV surveillance
+    - Environmental monitoring (temp, humidity, water)
+    - Fire suppression system
+    - UPS backup power
+    
+  hardware_devices:
+    - Enclosure tamper switches
+    - Anti-tamper screws
+    - Security seals
+    - GPS tracking (for mobile deployments)
+    - Remote wipe capability
+    
+  network_hardware:
+    - Locked network cabinets
+    - Port security (MAC filtering)
+    - Disable unused ports
+    - Monitor for rogue devices
+    
+  media_handling:
+    - Secure disposal of failed drives
+    - Encryption of backup media
+    - Chain of custody tracking
+    - Regular inventory audits
+Application Security
+Secure Coding Guidelines
+python
+# Security best practices examples
 
-Configuration: Config files (redact secrets)
+# 1. Avoid SQL injection
+# BAD:
+query = f"SELECT * FROM users WHERE username = '{username}'"
 
-Screenshots: If applicable
+# GOOD:
+query = "SELECT * FROM users WHERE username = %s"
+cursor.execute(query, (username,))
+
+# 2. Avoid command injection
+# BAD:
+os.system(f"ping {ip_address}")
+
+# GOOD:
+subprocess.run(["ping", ip_address], shell=False)
+
+# 3. Secure file operations
+# BAD:
+with open(user_input, 'r') as f:
+    data = f.read()
+
+# GOOD:
+safe_path = os.path.join(BASE_DIR, os.path.basename(user_input))
+with open(safe_path, 'r') as f:
+    data = f.read()
+
+# 4. Logging without sensitive data
+logging.info(f"User {user_id} logged in")  # OK
+logging.info(f"Password {password}")  # NOT OK - never log passwords
+
+# 5. Secure temporary files
+import tempfile
+with tempfile.NamedTemporaryFile(delete=True) as tmp:
+    tmp.write(data)
+    # Automatically deleted
+
+# 6. Use secrets module for tokens
+import secrets
+token = secrets.token_urlsafe(32)
+
+# 7. Validate redirect URLs
+from urllib.parse import urlparse
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and \
+           ref_url.netloc == test_url.netloc
+Dependency Scanning
+bash
+# Regular dependency vulnerability scanning
+
+# Using safety
+pip install safety
+safety check -r requirements.txt
+
+# Using bandit (static analysis)
+bandit -r app/ -f html -o bandit_report.html
+
+# Using OWASP dependency-check
+docker run --rm \
+  -v $(pwd):/src \
+  owasp/dependency-check \
+  --scan /src \
+  --format HTML \
+  --out /src/reports
+
+# Using Snyk
+snyk test
+snyk monitor
+
+# Using pip-audit
+pip-audit --requirement requirements.txt
+Secret Management
+python
+# infrastructure/security/secrets.py
+from hashicorp import vault
+
+class SecretManager:
+    """Centralized secret management with HashiCorp Vault"""
+    
+    def __init__(self):
+        self.vault_client = vault.Client(
+            url=os.getenv("VAULT_ADDR", "https://vault.example.com"),
+            token=os.getenv("VAULT_TOKEN")
+        )
+        
+    def get_database_password(self) -> str:
+        """Retrieve database password from Vault"""
+        secret = self.vault_client.secrets.kv.v2.read_secret(
+            mount_point="database",
+            path="drone-detector"
+        )
+        return secret["data"]["data"]["password"]
+        
+    def rotate_secrets(self):
+        """Rotate secrets periodically"""
+        # Generate new passwords
+        new_db_password = secrets.token_urlsafe(32)
+        new_api_key = secrets.token_urlsafe(48)
+        
+        # Update in Vault
+        self.vault_client.secrets.kv.v2.create_or_update_secret(
+            mount_point="database",
+            path="drone-detector",
+            secret={"password": new_db_password}
+        )
+        
+        # Update applications
+        self._restart_services()
+        
+    def audit_secret_access(self):
+        """Audit all secret access"""
+        response = self.vault_client.secrets.kv.v2.read_secret_metadata(
+            mount_point="database",
+            path="drone-detector"
+        )
+        return response["data"]["version"]
+Logging & Monitoring
+Audit Logging
+python
+# infrastructure/logging/audit.py
+import structlog
+
+class AuditLogger:
+    """Comprehensive audit logging"""
+    
+    def __init__(self):
+        self.logger = structlog.get_logger("audit")
+        
+    def log_login(self, user_id: str, success: bool, ip: str):
+        """Log authentication attempts"""
+        self.logger.info(
+            "authentication_attempt",
+            user_id=user_id,
+            success=success,
+            ip_address=ip,
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+    def log_data_access(self, user_id: str, resource: str, action: str):
+        """Log data access"""
+        self.logger.info(
+            "data_access",
+            user_id=user_id,
+            resource=resource,
+            action=action,
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+    def log_config_change(self, user_id: str, config_key: str, old_value: str, new_value: str):
+        """Log configuration changes"""
+        self.logger.info(
+            "config_change",
+            user_id=user_id,
+            config_key=config_key,
+            old_value=old_value,
+            new_value=new_value,
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+    def log_admin_action(self, user_id: str, action: str, details: dict):
+        """Log administrative actions"""
+        self.logger.info(
+            "admin_action",
+            user_id=user_id,
+            action=action,
+            details=details,
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+    def log_security_event(self, event_type: str, severity: str, details: dict):
+        """Log security events"""
+        self.logger.warning(
+            event_type,
+            severity=severity,
+            details=details,
+            timestamp=datetime.utcnow().isoformat()
+        )
+Security Monitoring
+yaml
+# prometheus/alerts-security.yml
+groups:
+  - name: security_alerts
+    rules:
+      - alert: MultipleAuthFailures
+        expr: rate(login_failures_total[5m]) > 5
+        for: 1m
+        annotations:
+          severity: critical
+          summary: "Multiple authentication failures detected"
+          
+      - alert: UnusualDataExport
+        expr: rate(data_export_total[1h]) > 100
+        for: 5m
+        annotations:
+          severity: high
+          summary: "Unusual data export activity"
+          
+      - alert: APIKeyLeak
+        expr: api_key_usage_total{valid="false"} > 0
+        for: 1m
+        annotations:
+          severity: critical
+          summary: "Invalid API key usage detected"
+          
+      - alert: RateLimitExceeded
+        expr: rate_limit_violations_total[5m] > 10
+        for: 2m
+        annotations:
+          severity: medium
+          summary: "Rate limit exceeded repeatedly"
+Incident Response
+Incident Response Plan
+yaml
+incident_response:
+  severity_levels:
+    critical:
+      - Data breach
+      - System compromise
+      - Unauthorized physical access
+    high:
+      - Denial of service
+      - Authentication bypass
+      - Data corruption
+    medium:
+      - Failed security controls
+      - Suspicious activity
+      - Policy violation
+    low:
+      - Attempted scans
+      - Minor misconfigurations
+      - Informational events
+    
+  response_teams:
+    security_team:
+      roles:
+        - Incident Commander
+        - Technical Lead
+        - Communications Lead
+        - Forensics Lead
+      contact:
+        oncall: +1-555-SEC-ONCALL
+        pager: security@drone-detector.com
+        
+    engineering_team:
+      roles:
+        - Platform Engineer
+        - Database Engineer
+        - Network Engineer
+        
+    legal_team:
+      roles:
+        - Legal Counsel
+        - Compliance Officer
+        
+  response_steps:
+    identification:
+      - Detect potential incident
+      - Classification and severity
+      - Initial notification
+    
+    containment:
+      - Isolate affected systems
+      - Block access if needed
+      - Preserve evidence
+    
+    eradication:
+      - Remove threat
+      - Patch vulnerabilities
+      - Clean systems
+    
+    recovery:
+      - Restore from backups
+      - Verify system integrity
+      - Resume operations
+    
+    lessons_learned:
+      - Root cause analysis
+      - Update controls
+      - Document improvements
+Incident Response Scripts
+python
+# scripts/incident_response.py
+class IncidentResponse:
+    """Automated incident response actions"""
+    
+    async def handle_data_breach(self, compromised_data: list):
+        """Respond to potential data breach"""
+        
+        # 1. Log incident
+        audit_logger.log_security_event(
+            "data_breach",
+            "critical",
+            {"compromised_data": compromised_data}
+        )
+        
+        # 2. Revoke all tokens
+        await self.revoke_all_tokens()
+        
+        # 3. Rotate all secrets
+        await secret_manager.rotate_secrets()
+        
+        # 4. Isolate affected systems
+        await self.isolate_systems(compromised_data)
+        
+        # 5. Notify security team
+        await self.send_alert(
+            "data_breach_detected",
+            {"severity": "critical"}
+        )
+        
+        # 6. Start forensics capture
+        await self.capture_forensics()
+        
+        # 7. Legal notification
+        if "pii" in compromised_data:
+            await self.notify_legal("pii_breach")
+            
+    async def block_suspicious_ip(self, ip_address: str):
+        """Block suspicious IP address"""
+        
+        # Add to firewall block list
+        subprocess.run([
+            "ufw", "deny", "from", ip_address
+        ])
+        
+        # Update fail2ban configuration
+        jail_config = f"""
+[drone-detector]
+enabled = true
+filter = drone-detector
+logpath = /var/log/drone-detector/auth.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+"""
+        with open("/etc/fail2ban/jail.d/drone-detector.conf", "w") as f:
+            f.write(jail_config)
+            
+        # Restart fail2ban
+        subprocess.run(["systemctl", "restart", "fail2ban"])
+Compliance
+GDPR Compliance
+python
+# infrastructure/compliance/gdpr.py
+class GDPRCompliance:
+    """GDPR compliance implementation"""
+    
+    def __init__(self):
+        self.data_retention_days = 30  # GDPR requirement
+        
+    async def delete_user_data(self, user_id: str):
+        """Right to be forgotten - delete all user data"""
+        
+        # Delete from all tables
+        await db.execute(
+            "DELETE FROM users WHERE id = %s", (user_id,)
+        )
+        await db.execute(
+            "DELETE FROM detections WHERE user_id = %s", (user_id,)
+        )
+        await db.execute(
+            "DELETE FROM alerts WHERE user_id = %s", (user_id,)
+        )
+        await db.execute(
+            "DELETE FROM audit_logs WHERE user_id = %s", (user_id,)
+        )
+        
+        # Anonymize remaining data
+        await db.execute(
+            "UPDATE analytics SET user_id = NULL WHERE user_id = %s",
+            (user_id,)
+        )
+        
+        # Log deletion
+        audit_logger.log_admin_action(
+            "GDPR deletion",
+            user_id,
+            {"type": "right_to_be_forgotten"}
+        )
+        
+    async def export_user_data(self, user_id: str) -> dict:
+        """Right to data portability"""
+        
+        # Collect all user data
+        user_data = {
+            "profile": await self.get_user_profile(user_id),
+            "detections": await self.get_user_detections(user_id),
+            "alerts": await self.get_user_alerts(user_id),
+            "config": await self.get_user_config(user_id),
+            "metadata": {
+                "export_date": datetime.utcnow().isoformat(),
+                "format": "json",
+                "version": "1.0"
+            }
+        }
+        
+        # Return in portable format
+        return user_data
+Compliance Checklist
+yaml
+compliance_checklist:
+  data_handling:
+    - Data minimization practices
+    - Purpose limitation
+    - Storage limitation
+    - Accuracy and integrity
+    - Confidentiality
+    
+  user_rights:
+    - Right to access
+    - Right to rectification
+    - Right to erasure
+    - Right to restrict processing
+    - Right to data portability
+    - Right to object
+    
+  security_measures:
+    - Encryption at rest
+    - Encryption in transit
+    - Access controls
+    - Audit logging
+    - Breach notification procedures
+    
+  documentation:
+    - Data processing records
+    - Privacy impact assessments
+    - Security policies
+    - Incident response plans
+    - Vendor agreements
+Security Testing
+Penetration Testing
+bash
+# Regular penetration testing commands
+
+# API security scanning
+docker run --rm -v $(pwd):/zap/wrk \
+  owasp/zap2docker-stable zap-api-scan.py \
+  -t http://localhost:8888/openapi.json \
+  -f openapi \
+  -r report.html
+
+# Network scanning
+nmap -sV -sC -p- localhost
+nmap --script vuln localhost
+
+# SSL/TLS scanning
+docker run --rm -v $(pwd):/opt \
+  jumanjihouse/sslscan localhost:443 > ssl_report.txt
+
+# Vulnerability scanning
+docker run --rm \
+  aquasec/trivy image drone-detector:latest
+
+# Dependency scanning
+safety check -r requirements.txt
+Continuous Security
+yaml
+# .github/workflows/security.yml
+name: Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: SAST Scan
+        uses: github/codeql-action/init@v1
+        with:
+          languages: python
+          
+      - name: Dependency Scan
+        run: |
+          pip install safety
+          safety check -r requirements.txt --full-report
+          
+      - name: Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          
+      - name: Container Scan
+        run: |
+          docker build -t drone-detector .
+          trivy image --severity HIGH,CRITICAL drone-detector
+          
+      - name: DAST Scan
+        run: |
+          docker-compose up -d
+          sleep 30
+          zap-api-scan.py -t http://localhost:8888/openapi.json
+Security Updates
+Automated Updates
+yaml
+# docker-compose.yml with Watchtower for automatic updates
+services:
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Daily
+      - WATCHTOWER_MONITOR_ONLY=false
+      - WATCHTOWER_INCLUDE_RESTART=true
+      - WATCHTOWER_ROLLING_RESTART=true
+Update Verification
+python
+# scripts/verify_updates.py
+def verify_security_update():
+    """Verify security updates before deployment"""
+    
+    # 1. Run tests
+    subprocess.run(["pytest", "tests/security/"])
+    
+    # 2. Check for regressions
+    subprocess.run(["pytest", "tests/regression/"])
+    
+    # 3. Verify signatures
+    subprocess.run(["cosign", "verify", "image:tag"])
+    
+    # 4. Check SBOM
+    subprocess.run(["syft", "image:tag", "-o", "spdx"])
+    
+    # 5. Run vulnerability scan
+    subprocess.run(["trivy", "image", "--severity", "CRITICAL", "image:tag"])
+    
+    print("Security verification passed")
