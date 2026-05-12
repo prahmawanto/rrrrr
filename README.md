@@ -4,7 +4,6 @@ about: Report hardware-related issues (SDR, antennas, USB, etc.)
 title: '[HARDWARE] '
 labels: hardware, bug, needs-triage
 assignees: ''
-
 ---
 
 ## 🔧 Hardware Issue Description
