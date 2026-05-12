@@ -1,330 +1,644 @@
-drone-detector/tests/hardware/README.md - Hardware Tests Documentation
+# Drone Detector System Architecture
 
-markdown
-# Hardware Tests Directory
+## Overview
 
-This directory contains hardware test suites for the Drone Detection System, including tests for SDR devices (HackRF, RTL-SDR, Pluto), antenna controllers, signal generators, and other hardware components. These tests verify that hardware devices are functioning correctly and meeting performance requirements.
+The Drone Detector is a comprehensive, production-grade system for detecting, identifying, and tracking drones using Software Defined Radio (SDR) technology. The system employs a modular, clean architecture with clear separation of concerns, domain-driven design, and support for multiple deployment scenarios.
 
-## Directory Structure
-tests/hardware/
-├── README.md # This file
-├── init.py # Package initialization and utilities
-├── hackrf/ # HackRF One tests
-│ ├── test_hackrf_basic.py # Basic device functionality
-│ ├── test_hackrf_gain.py # Gain control tests
-│ └── test_hackrf_stability.py # Long-term stability tests
-├── rtl_sdr/ # RTL-SDR tests
-│ ├── test_rtl_basic.py # Basic RTL-SDR functionality
-│ └── test_rtl_tuning.py # Frequency tuning tests
-├── pluto/ # ADALM-PLUTO tests
-│ ├── test_pluto_basic.py # Basic Pluto functionality
-│ └── test_pluto_network.py # Network operation tests
-├── mock/ # Mock hardware tests
-│ ├── test_mock_hardware.py # Mock SDR tests
-│ └── test_mock_scenarios.py # Scenario management tests
-└── utils/ # Testing utilities
-└── rf_sanity_check.py # RF sanity check utilities
+## Architecture Principles
+
+- **Clean Architecture**: Dependency inversion with business logic at the core
+- **Domain-Driven Design**: Rich domain models encapsulating business rules
+- **Hexagonal Architecture**: Ports and adapters for infrastructure isolation
+- **Event-Driven**: Loose coupling through event propagation
+- **Observability First**: Metrics, logs, and traces throughout
+- **Security by Design**: Defense in depth, least privilege
+- **Scalability**: Horizontal scaling for high-throughput scenarios
+
+## High-Level Architecture
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ External World │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│ │ Web │ │ Mobile │ │ API │ │ MQTT │ │ Kafka │ │
+│ │ Client │ │ Client │ │ Client │ │ Broker │ │ Stream │ │
+│ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ │
+│ │ │ │ │ │ │
+└───────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┘
+│ │ │ │ │
+▼ ▼ ▼ ▼ ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Interface Layer (API) │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ FastAPI Application │ │
+│ │ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ │ │
+│ │ │ REST │ │WebSocket│ │ GraphQL │ │ gRPC │ │ Metrics │ │ │
+│ │ │Endpoints│ │ Server │ │ Schema │ │ Server │ │Endpoint │ │ │
+│ │ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ │ │
+│ │ │ │ │ │ │ │ │
+│ │ ┌────┴───────────┴───────────┴───────────┴───────────┴────┐ │ │
+│ │ │ Middleware (Auth, CORS, Logging) │ │ │
+│ │ └─────────────────────────────────────────────────────────┘ │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Application Layer (Use Cases) │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │ Pipeline │ │ Service │ │ Worker │ │ Scheduler│ │ Event │ │ │
+│ │ │ Chain │ │ Layer │ │ Pool │ │ Tasks │ │ Handler │ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │ │
+│ │ │ │
+│ │ Use Cases: │ │
+│ │ • DetectDrone • TrackDrone • IdentifyDrone │ │
+│ │ • ClassifySignal • GenerateAlert • RecordIQ │ │
+│ │ • TrainModel • ExportData • ManageSystem │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Domain Layer (Core) │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ Entities (Aggregates) │ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │ IQSignal │ │Detection │ │ Drone │ │ Spectrum │ │ Alert │ │ │
+│ │ │ │ │ Event │ │Signature │ │ Profile │ │ │ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │ │
+│ │ │ │
+│ │ Value Objects │ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │Frequency │ │Position │ │ThreatLevel│ │Confidence│ │TimeWindow│ │ │
+│ │ │ Band │ │ │ │ │ │ Score │ │ │ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │ │
+│ │ │ │
+│ │ Domain Services │ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │ Signal │ │ Threat │ │ Pattern │ │ Remote │ │ TDOA │ │ │
+│ │ │Processor │ │Assessment│ │ Matching │ │ID Decoder│ │Engine │ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │ │
+│ │ │ │
+│ │ Policies │ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │ Alert │ │Frequency │ │ Retention│ │ Privacy │ │ Rate │ │ │
+│ │ │ Policies │ │Allocation│ │ Policies │ │ Policies │ │Limiting │ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Infrastructure Layer (Adapters) │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│ │ Hardware │ │ Storage │ │ Messaging │ │ External │ │
+│ │ Adapters │ │ Adapters │ │ Adapters │ │ Services │ │
+│ │ │ │ │ │ │ │ │ │
+│ │ • HackRF │ │ • PostgreSQL│ │ • Redis │ │ • ADS-B │ │
+│ │ • RTL-SDR │ │ • Timescale │ │ • RabbitMQ │ │ • FlightRadar│ │
+│ │ • Pluto │ │ • MinIO │ │ • Kafka │ │ • Notify │ │
+│ │ • Mock │ │ • SQLite │ │ • WebSocket │ │ • Geocoding │ │
+│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+│ │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│ │ Monitoring │ │ Cache │ │ Queue │ │ Search │ │
+│ │ │ │ │ │ │ │ │ │
+│ │ • Prometheus│ │ • Redis │ │ • Celery │ │ • Elastic │ │
+│ │ • Grafana │ │ • Memcached │ │ • RQ │ │ • Meilisearch│ │
+│ │ • Loki │ │ │ │ │ │ │ │
+│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 text
 
-## Hardware Test Categories
+## Component Architecture
 
-### HackRF One Tests (`hackrf/`)
+### 1. Domain Layer (Core Business Logic)
 
-| Test File | Description | Key Test Areas |
-|-----------|-------------|----------------|
-| `test_hackrf_basic.py` | Basic device functionality | Detection, initialization, tuning, sample reading |
-| `test_hackrf_gain.py` | Gain control testing | LNA/VGA ranges, linearity, AMP control |
-| `test_hackrf_stability.py` | Long-term stability | Temperature effects, drift, continuous operation |
+The domain layer is the heart of the system, containing all business rules and logic.
 
-### RTL-SDR Tests (`rtl_sdr/`)
+#### Entities
 
-| Test File | Description | Key Test Areas |
-|-----------|-------------|----------------|
-| `test_rtl_basic.py` | Basic RTL-SDR functionality | Device detection, tuning, sample capture |
-| `test_rtl_tuning.py` | Frequency tuning tests | Range accuracy, settling time, drift |
+```python
+# Core entities that have identity and lifecycles
+class IQSignal:
+    - data: complex64[]
+    - sample_rate: float
+    - center_frequency: float
+    - timestamp: datetime
+    - metadata: dict
 
-### ADALM-PLUTO Tests (`pluto/`)
+class DetectionEvent:
+    - id: UUID
+    - drone_id: str
+    - frequency: float
+    - confidence: float
+    - threat_level: ThreatLevel
+    - position: Optional[Position]
+    - timestamp: datetime
 
-| Test File | Description | Key Test Areas |
-|-----------|-------------|----------------|
-| `test_pluto_basic.py` | Basic Pluto functionality | Device init, RX/TX, gain control |
-| `test_pluto_network.py` | Network operation | Remote access, streaming, latency |
-
-### Mock Hardware Tests (`mock/`)
-
-| Test File | Description | Key Test Areas |
-|-----------|-------------|----------------|
-| `test_mock_hardware.py` | Mock SDR tests | Signal generation, streaming, error simulation |
-| `test_mock_scenarios.py` | Scenario management | Scenario switching, signal characteristics |
-
-### Utilities (`utils/`)
-
-| File | Description | Key Features |
-|------|-------------|--------------|
-| `rf_sanity_check.py` | RF hardware validation | Signal detection, frequency accuracy, noise floor |
-
-## Prerequisites
-
-### Hardware Requirements
-
-| Device | Minimum Requirements | Recommended |
-|--------|---------------------|-------------|
-| HackRF One | USB 3.0 port, antenna | 10 MHz reference, LNA |
-| RTL-SDR | USB 2.0 port, antenna | TCXO version |
-| ADALM-PLUTO | USB port or network | External antenna |
-
-### Software Requirements
-
-```bash
-# Install SDR libraries
-sudo apt-get install libhackrf-dev librtlsdr-dev libiio-dev
-
-# Install Python dependencies
-pip install pyhackrf pyrtlsdr pyadi-iio
-pip install numpy scipy matplotlib
-
-# Install test dependencies
-pip install pytest pytest-cov pytest-asyncio pytest-timeout
-Running Hardware Tests
-Basic Test Execution
-bash
-# Run all hardware tests
-python -m pytest tests/hardware/ -v
-
-# Run HackRF tests only
-python -m pytest tests/hardware/hackrf/ -v
-
-# Run specific test file
-python -m pytest tests/hardware/hackrf/test_hackrf_basic.py -v
-
-# Run specific test class
-python -m pytest tests/hackrf/test_hackrf_gain.py::TestHackRFLNAGain -v
-With Hardware Detection
-bash
-# Tests automatically skip if hardware not present
-python -m pytest tests/hardware/hackrf/ -v
-
-# Force hardware tests (fail if not present)
-python -m pytest tests/hardware/hackrf/ -v --require-hardware
-
-# Run mock tests only (no hardware needed)
-python -m pytest tests/hardware/mock/ -v
-Performance Testing
-bash
-# Run stability tests (long duration)
-python -m pytest tests/hardware/hackrf/test_hackrf_stability.py -v
-
-# Run gain sweep tests
-python -m pytest tests/hardware/hackrf/test_hackrf_gain.py::TestHackRFLNAGain -v
-
-# Run with performance profiling
-python -m pytest tests/hardware/hackrf/test_hackrf_basic.py --durations=10
-With Coverage
-bash
-# Run with coverage report
-python -m pytest tests/hardware/hackrf/ --cov=. --cov-report=html
-
-# Generate XML coverage for CI
-python -m pytest tests/hardware/hackrf/ --cov=. --cov-report=xml
-Test Configuration
-Environment Variables
-Variable	Description	Default
-HACKRF_SERIAL	Specific HackRF serial number	None (auto-detect)
-RTL_SDR_INDEX	RTL-SDR device index	0
-PLUTO_URI	Pluto network URI	usb:0
-HARDWARE_TIMEOUT	Test timeout (seconds)	30
-RF_SOURCE_FREQ	Known signal frequency for testing	100e6
-Test Configuration File
-yaml
-# hardware_test_config.yaml
-hardware:
-  hackrf:
-    enabled: true
-    serial: null
-    sample_rate: 10e6
-    timeout: 30
-  
-  rtl_sdr:
-    enabled: true
-    index: 0
-    sample_rate: 2.4e6
-  
-  pluto:
-    enabled: false
-    uri: "usb:0"
-    network: "192.168.2.1"
-
-test:
-  frequencies:
-    vhf: [88e6, 100e6, 108e6, 144e6, 440e6]
-    "2.4g": [2.400e9, 2.412e9, 2.442e9, 2.472e9]
-    "5.8g": [5.150e9, 5.180e9, 5.320e9, 5.725e9, 5.825e9]
-  
-  sample_rates: [1e6, 2.4e6, 5e6, 8e6, 10e6, 20e6]
-  
-  thresholds:
-    min_sample_rate_msps: 8.0
-    max_tuning_time_ms: 100.0
-    min_detection_snr_db: 10.0
-    max_noise_floor_dbm: -85.0
-Writing Hardware Tests
-Test Structure Template
+class DroneSignature:
+    - drone_type: str
+    - frequency_bands: List[FrequencyBand]
+    - modulation_type: Modulation
+    - signature_features: FeatureVector
+    - confidence_threshold: float
+Value Objects
 python
-import unittest
-from tests.hardware import require_hardware, HardwareTestCase
+# Immutable objects with no identity
+class FrequencyBand:
+    - start: float
+    - end: float
+    - center: float
+    - bandwidth: float
 
-class TestDeviceFeature(HardwareTestCase):
-    """Test device specific feature"""
-    
-    @classmethod
-    def setUpClass(cls):
-        """Initialize device once for all tests"""
-        cls.device = DeviceClass()
-        cls.device.initialize({'sample_rate': 10e6})
-    
-    @classmethod
-    def tearDownClass(cls):
-        """Clean up after tests"""
-        cls.device.close()
-    
-    @require_hardware('hackrf')
-    def test_feature(self):
-        """Test specific device feature"""
-        # Configure device
-        self.device.tune(2.44e9)
-        self.device.set_gain(20)
-        
-        # Perform test
-        samples = self.device.read_samples(16384)
-        
-        # Verify results
-        self.assertGreater(len(samples), 0)
-        self.record_measurement("sample_count", len(samples))
-        
-        # Assert with context
-        self.assertTestPass(
-            self.device.is_ready(),
-            "Device not ready"
-        )
-Using Test Helpers
+class Position:
+    - latitude: float
+    - longitude: float
+    - altitude: float
+    - accuracy: float
+
+class ThreatLevel(Enum):
+    - NONE = 0
+    - LOW = 1
+    - MEDIUM = 2
+    - HIGH = 3
+    - CRITICAL = 4
+Domain Services
 python
-from tests.hardware import HardwareTestHelper
+# Stateless operations that don't belong to entities
+class SignalProcessor:
+    def calculate_psd(signal: IQSignal) -> PowerSpectrum
+    def extract_features(signal: IQSignal) -> FeatureVector
+    def detect_peaks(spectrum: PowerSpectrum) -> List[Peak]
 
-class TestWithHelpers(HardwareTestCase):
+class ThreatAssessment:
+    def assess_threat(detection: DetectionEvent) -> ThreatLevel
+    def calculate_risk_score(context: DetectionContext) -> float
+2. Application Layer (Use Cases)
+Orchestrates domain objects to accomplish user goals.
+
+python
+class DetectDroneUseCase:
+    def execute(self, signal: IQSignal) -> DetectionEvent:
+        1. Convert IQ to spectrum
+        2. Extract signal features
+        3. Match against drone signatures
+        4. Assess threat level
+        5. Store detection
+        6. Publish events
+        7. Return result
+
+class TrackDroneUseCase:
+    def execute(self, drone_id: str) -> Trajectory:
+        1. Fetch historical detections
+        2. Apply tracking algorithm (Kalman filter)
+        3. Predict future position
+        4. Return trajectory
+
+class GenerateAlertUseCase:
+    def execute(self, detection: DetectionEvent) -> Alert:
+        1. Evaluate alert policies
+        2. Determine severity
+        3. Format notification
+        4. Route to channels
+        5. Log alert
+3. Infrastructure Layer (Technical Details)
+Adapters for external systems.
+
+Hardware Adapters
+python
+class SDRAdapter(ABC):
+    @abstractmethod
+    def start_stream(self, config: HardwareConfig) -> AsyncIterator[IQSignal]
     
-    def test_frequency_scan(self):
-        # Get test frequencies
-        freqs = self.helper.get_test_frequencies('2g')
-        
-        # Measure tuning time
-        tuning_time = self.helper.measure_tuning_time(self.device, freqs)
-        
-        # Generate test signal
-        signal = self.helper.generate_test_signal(100e6, snr_db=20)
-        
-        # Create test directory for logs
-        log_dir = self.helper.create_test_directory('hackrf')
-Test Data
-Test Signal Files
+    @abstractmethod
+    def stop_stream(self) -> None
+    
+    @abstractmethod
+    def configure(self, config: HardwareConfig) -> None
+
+class HackRFAdapter(SDRAdapter):
+    # Implementation specific to HackRF One
+
+class RTL_SDRAdapter(SDRAdapter):
+    # Implementation for RTL-SDR dongles
+Repository Pattern
+python
+class DetectionRepository(ABC):
+    @abstractmethod
+    async def save(self, detection: DetectionEvent) -> None
+    
+    @abstractmethod
+    async def find_by_id(self, id: UUID) -> Optional[DetectionEvent]
+    
+    @abstractmethod
+    async def find_by_time_range(
+        self, start: datetime, end: datetime
+    ) -> List[DetectionEvent]
+
+class PostgresDetectionRepository(DetectionRepository):
+    # PostgreSQL specific implementation
+Data Flow Architecture
+Real-Time Detection Pipeline
 text
-tests/hardware/data/
-├── test_signals/
-│   ├── tone_100MHz.iq          # 100 MHz test tone
-│   ├── chirp_2.4GHz.iq         # Chirp signal
-│   └── modulated_5.8GHz.iq     # Modulated test signal
-├── expected/
-│   ├── spectrum_expected.npy   # Expected spectrum data
-│   └── constellation.npy       # Expected constellation
-└── calibration/
-    ├── noise_floor.json        # Calibrated noise floor
-    └── gain_calibration.npy    # Gain calibration data
-RF Sanity Check
-Quick Hardware Validation
-python
-from tests.hardware.utils.rf_sanity_check import RFSanityChecker, quick_connectivity_test
+┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
+│  SDR    │────▶│  IQ     │────▶│  FFT    │────▶│  Peak   │────▶│ Pattern │
+│Capture  │     │ Stream  │     │Compute  │     │Detect   │     │ Matching│
+└─────────┘     └─────────┘     └─────────┘     └─────────┘     └────┬────┘
+                                                                      │
+                                                                      ▼
+┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
+│  Alert  │◀────│ Threat  │◀────│  ML     │◀────│ Classify│◀────│ Feature │
+│ Generate│     │ Assess  │     │ Predict │     │  Drone  │     │ Extract │
+└─────────┘     └─────────┘     └─────────┘     └─────────┘     └─────────┘
+     │
+     ▼
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│ Notify  │────▶│ Store   │────▶│  Push   │
+│ Clients │     │   DB    │     │WebSocket│
+└─────────┘     └─────────┘     └─────────┘
+Batch Processing Pipeline
+text
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Record  │────▶│  Upload  │────▶│ Process  │────▶│ Extract  │
+│   IQ     │     │  to S3   │     │  Batch   │     │Features  │
+└──────────┘     └──────────┘     └──────────┘     └────┬─────┘
+                                                         │
+                                                         ▼
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Update  │◀────│  Train   │◀────│  Label   │◀────│  Store   │
+│  Model   │     │  Model   │     │  Data    │     │Features  │
+└──────────┘     └──────────┘     └──────────┘     └──────────┘
+Deployment Architecture
+Single-Node Deployment
+text
+┌─────────────────────────────────────────────────────────────┐
+│                         Single Host                          │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                    Docker/Podman                      │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐          │    │
+│  │  │   API    │  │  Worker  │  │ Postgres │          │    │
+│  │  │ Container│  │Container │  │ Container│          │    │
+│  │  └──────────┘  └──────────┘  └──────────┘          │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐          │    │
+│  │  │  Redis   │  │  MinIO   │  │  Nginx   │          │    │
+│  │  │ Container│  │Container │  │ Container│          │    │
+│  │  └──────────┘  └──────────┘  └──────────┘          │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                    USB/SDR Hardware                   │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+Multi-Node (Kubernetes) Deployment
+text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Kubernetes Cluster                               │
+│                                                                          │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌───────────────┐   │
+│  │      Node 1         │  │      Node 2         │  │    Node 3     │   │
+│  │  ┌───────────────┐  │  │  ┌───────────────┐  │  │ ┌───────────┐ │   │
+│  │  │ API (x2)      │  │  │  │ API (x2)      │  │  │ │ Worker    │ │   │
+│  │  ├───────────────┤  │  │  ├───────────────┤  │  │ │ (x4)      │ │   │
+│  │  │ WebSocket     │  │  │  │ WebSocket     │  │  ├───────────┤ │   │
+│  │  ├───────────────┤  │  │  ├───────────────┤  │  │ │ Beat      │ │   │
+│  │  │ SDR Daemon    │  │  │  │ Prometheus    │  │  └───────────┘ │   │
+│  │  └───────────────┘  │  │  ├───────────────┤  │                 │   │
+│  │      USB/SDR        │  │  │ Grafana       │  │                 │   │
+│  └─────────────────────┘  │  └───────────────┘  │                 │   │
+│                           └─────────────────────┘                 │   │
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                    Shared Services                               │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │   │
+│  │  │PostgreSQL│  │  Redis   │  │  MinIO   │  │   Kafka  │       │   │
+│  │  │(Primary) │  │(Cluster) │  │ (HA)     │  │ (Stream) │       │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+Signal Processing Chain
+IQ to Detection Flow
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Signal Processing Pipeline                        │
+│                                                                              │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐          │
+│  │   Raw    │     │   IQ     │     │   FFT    │     │   PSD    │          │
+│  │ Samples  │────▶│  Data    │────▶│ Compute  │────▶│Compute   │          │
+│  │ (I/Q)    │     │(Complex) │     │          │     │          │          │
+│  └──────────┘     └──────────┘     └──────────┘     └────┬─────┘          │
+│                                                            │                │
+│                                                            ▼                │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐          │
+│  │  Threat  │     │  Match   │     │ Feature  │     │  Peak    │          │
+│  │  Level   │◀────│Database  │◀────│ Extract  │◀────│ Detect   │          │
+│  └──────────┘     └──────────┘     └────┬─────┘     └──────────┘          │
+│                                          │                                  │
+│                                          ▼                                  │
+│                                ┌──────────────────┐                        │
+│                                │   ML Inference   │                        │
+│                                │    Classifier    │                        │
+│                                └──────────────────┘                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+Feature Extraction
+text
+Input: IQ Signal (complex samples)
+    │
+    ├──► Time Domain Features
+    │    ├── RMS Power
+    │    ├── Peak-to-Average Ratio
+    │    ├── Kurtosis
+    │    ├── Skewness
+    │    └── Zero-Crossing Rate
+    │
+    ├──► Frequency Domain Features
+    │    ├── Center Frequency
+    │    ├── Bandwidth (99%)
+    │    ├── Spectral Flatness
+    │    ├── Spectral Centroid
+    │    ├── Spectral Rolloff
+    │    └── Peak Frequencies
+    │
+    ├──► Cyclostationary Features
+    │    ├── Cyclic Autocorrelation
+    │    ├── Spectral Coherence
+    │    └── Cycle Frequencies
+    │
+    └──► Statistical Features
+         ├── Mean, Variance
+         ├── Higher-order moments
+         ├── Entropy
+         └── Correlation coefficients
 
-# Quick connectivity test
-if quick_connectivity_test(hackrf):
-    print("HackRF connected")
-
-# Full sanity check
-checker = RFSanityChecker(hackrf)
-results = checker.run_all_tests()
-checker.generate_report(results, "rf_report.html")
-Continuous Integration
-GitHub Actions Workflow
+Output: Feature Vector (128 dimensions)
+Security Architecture
+Defense in Depth
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Security Layers                                   │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │                        External Perimeter                          │    │
+│  │  • API Gateway / Load Balancer                                     │    │
+│  │  • WAF (Web Application Firewall)                                  │    │
+│  │  • DDoS Protection                                                 │    │
+│  │  • Rate Limiting                                                   │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                      │                                      │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │                         Network Layer                              │    │
+│  │  • TLS 1.3 for all communications                                  │    │
+│  │  • Certificate validation                                          │    │
+│  │  • Private network isolation                                       │    │
+│  │  • Network policies (Kubernetes)                                   │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                      │                                      │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │                        Application Layer                           │    │
+│  │  • JWT/OAuth2 authentication                                       │    │
+│  │  • RBAC authorization                                              │    │
+│  │  • Input validation                                                │    │
+│  │  • SQL injection prevention                                        │    │
+│  │  • XSS protection                                                  │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                      │                                      │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │                           Data Layer                               │    │
+│  │  • Encryption at rest (AES-256)                                    │    │
+│  │  • Encryption in transit (TLS)                                     │    │
+│  │  • Database encryption (TDE)                                       │    │
+│  │  • Key rotation                                                    │    │
+│  │  • Audit logging                                                   │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                      │                                      │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │                       Identity & Access                            │    │
+│  │  • Multi-factor authentication                                     │    │
+│  │  • SSO integration (SAML/OIDC)                                     │    │
+│  │  • Service accounts                                                │    │
+│  │  • Secrets management (Vault)                                      │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+Technology Stack
+Core Technologies
+Layer	Technology	Purpose
+Language	Python 3.11+	Primary development language
+Web Framework	FastAPI	REST API with OpenAPI docs
+Async	asyncio, AnyIO	Concurrent operations
+Signal Processing	NumPy, SciPy, FFTW	DSP operations
+ML/DL	TensorFlow, PyTorch, scikit-learn	Classification
+Type Safety	Pydantic, mypy	Data validation
+Infrastructure
+Component	Technology	Purpose
+Database	PostgreSQL	Primary storage
+Time-Series	TimescaleDB	Spectrum analytics
+Cache	Redis	Session, rate limiting
+Queue	Celery/RQ	Background tasks
+Object Storage	MinIO/S3	IQ recordings
+Logging	Loki + Vector	Log aggregation
+Metrics	Prometheus + Grafana	Monitoring
+Tracing	Jaeger	Distributed tracing
+Deployment
+Component	Technology	Purpose
+Container	Docker	Application packaging
+Orchestration	Kubernetes	Production deployment
+CI/CD	GitHub Actions	Automation
+IaC	Terraform	Infrastructure provisioning
+Service Mesh	Istio (optional)	Advanced networking
+Scalability Patterns
+Horizontal Scaling
 yaml
-name: Hardware Tests
+# API Servers - Stateless, can scale horizontally
+api:
+  replicas: 3-10 (HPA based on CPU/Memory)
 
-on:
-  push:
-    branches: [ main ]
-  schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM
+# Workers - Process background tasks
+worker:
+  replicas: 5-20 (based on queue length)
 
-jobs:
-  hackrf-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install HackRF drivers
-        run: sudo apt-get install -y libhackrf-dev
-      - name: Run HackRF tests
-        run: pytest tests/hardware/hackrf/ -v --cov=. --cov-report=xml
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-Test Coverage Goals
-Component	Target Coverage	Current
-HackRF Basic	90%	-
-HackRF Gain	85%	-
-HackRF Stability	80%	-
-RTL-SDR Basic	85%	-
-Pluto Basic	80%	-
-Mock Hardware	95%	-
-Utilities	70%	-
-Troubleshooting
-Common Issues
-Issue	Cause	Solution
-Device not found	USB connection issue	Check cable, replug device
-Permission denied	udev rules not set	Run sudo ./setup_udev.sh
-Tests timeout	Device not responding	Check power, reset device
-High noise floor	Antenna not connected	Connect antenna
-Frequency drift	PLL not locked	Increase settle time
-Debugging Hardware Tests
-bash
-# Run with hardware debug output
-HACKRF_DEBUG=1 pytest tests/hardware/hackrf/ -v
+# WebSocket - Stateful, need session affinity
+websocket:
+  replicas: 2-5 (with sticky sessions)
 
-# Capture USB traffic (requires wireshark)
-sudo usbmon -i 2 -o capture.pcap
+# Database - Read replicas for queries
+postgres:
+  primary: 1
+  read_replicas: 2-3
+Database Scaling
+text
+┌─────────────────────────────────────────────────────────────┐
+│                    Database Architecture                     │
+│                                                              │
+│  ┌──────────────┐                                          │
+│  │   Primary    │                                          │
+│  │ (Write/Read) │                                          │
+│  └──────┬───────┘                                          │
+│         │                                                   │
+│         │ Replication                                       │
+│         ▼                                                   │
+│  ┌──────────────┐     ┌──────────────┐                    │
+│  │   Replica 1  │     │   Replica 2  │                    │
+│  │   (Read)     │     │   (Read)     │                    │
+│  └──────────────┘     └──────────────┘                    │
+│                                                              │
+│  Partitioning:                                              │
+│  • detections_2024_01, detections_2024_02, ...            │
+│  • Time-based partitioning for spectrum data               │
+│                                                              │
+│  Sharding:                                                  │
+│  • By drone_id hash (future)                               │
+│  • Geographic sharding (multi-region)                      │
+└─────────────────────────────────────────────────────────────┘
+Observability
+Three Pillars
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Observability                                     │
+│                                                                              │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐         │
+│  │     Metrics      │  │      Logs        │  │     Traces       │         │
+│  │                  │  │                  │  │                  │         │
+│  │ • Request rate   │  │ • Application    │  │ • Request flow   │         │
+│  │ • Error rate     │  │ • Access logs    │  │ • Service calls  │         │
+│  │ • Latency        │  │ • Error logs     │  │ • DB queries     │         │
+│  │ • Resource usage │  │ • Audit logs     │  │ • External APIs  │         │
+│  │ • Queue depth    │  │ • Security logs  │  │ • Async tasks    │         │
+│  │ • Hardware stats │  │ • System logs    │  │ • Hardware ops   │         │
+│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘         │
+│           │                     │                     │                    │
+│           ▼                     ▼                     ▼                    │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐         │
+│  │   Prometheus     │  │      Loki        │  │     Jaeger       │         │
+│  │   + Alertmanager │  │   + Vector       │  │                  │         │
+│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘         │
+│           │                     │                     │                    │
+│           └─────────────────────┼─────────────────────┘                    │
+│                                 ▼                                           │
+│                    ┌────────────────────────┐                              │
+│                    │        Grafana         │                              │
+│                    │   (Unified Dashboard)  │                              │
+│                    └────────────────────────┘                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+Error Handling & Resilience
+Circuit Breaker Pattern
+python
+# Circuit breaker for external services
+@circuit_breaker(
+    failure_threshold=5,
+    recovery_timeout=60,
+    expected_exception=ConnectionError
+)
+async def call_external_api():
+    # API call that might fail
+    pass
+Retry with Backoff
+python
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type(NetworkError)
+)
+async def resilient_operation():
+    # Operation that may fail transiently
+    pass
+Bulkhead Pattern
+python
+# Limit concurrent operations
+bulkhead = Bulkhead(max_concurrent_calls=10, max_wait_time=5.0)
 
-# Monitor device temperature
-while true; do hackrf_info | grep temp; sleep 1; done
-
-# Check USB bandwidth
-lsusb -t | grep -A 5 HackRF
-Best Practices
-Hardware Protection: Never exceed maximum input levels
-
-Test Isolation: Each test should leave device in known state
-
-Timeout Management: Set appropriate timeouts for hardware operations
-
-Resource Cleanup: Always close device handles after tests
-
-Signal Levels: Use attenuators for high-power testing
-
-Temperature Awareness: Allow warm-up time before tests
-
-USB Bandwidth: Don't exceed USB bandwidth limits
-
-Ground Loops: Use proper grounding to avoid noise
-
-Safety Guidelines
-Hazard	Precaution
-RF Radiation	Use dummy load when transmitting
-ESD	Use grounded wrist strap
-Overheating	Ensure adequate ventilation
-Power surges	Use USB isolator
-Antenna contact	Keep antennas clear of people
+@bulkhead
+async def limited_operation():
+    # Resource-intensive operation
+    pass
+Data Retention & Lifecycle
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Data Lifecycle Policy                               │
+│                                                                              │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐          │
+│  │  Real-   │────▶│  Active  │────▶│   Warm   │────▶│   Cold   │          │
+│  │  time    │     │ Storage  │     │ Storage  │     │ Storage  │          │
+│  │  (Live)  │     │ (Hot)    │     │ (Warm)   │     │ (Archive)│          │
+│  └──────────┘     └──────────┘     └──────────┘     └──────────┘          │
+│       │                │                │                │                 │
+│       ▼                ▼                ▼                ▼                 │
+│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐          │
+│  │ Memory/  │     │  Redis/  │     │PostgreSQL│     │   S3/    │          │
+│  │ Stream   │     │  MinIO   │     │(primary) │     │ Glacier │          │
+│  └──────────┘     └──────────┘     └──────────┘     └──────────┘          │
+│                                                                              │
+│  Retention:                                                                  │
+│  • Live: 1 minute                                                           │
+│  • Hot: 24 hours                                                            │
+│  • Warm: 90 days                                                            │
+│  • Cold: 7 years                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+Performance Targets
+Metric	Target	P99 Target
+Detection Latency	< 100ms	< 500ms
+API Response Time	< 50ms	< 200ms
+WebSocket Message Latency	< 10ms	< 50ms
+Database Query (simple)	< 10ms	< 50ms
+Database Query (complex)	< 200ms	< 1000ms
+IQ Processing Rate	10 MSPS	20 MSPS
+Concurrent API Clients	1000	5000
+Concurrent WebSocket	500	2000
+Detection Accuracy	> 95%	N/A
+False Positive Rate	< 1%	< 5%
+Failure Modes & Mitigations
+Failure	Mitigation	Recovery
+SDR Hardware Failure	Fallback to mock hardware, alert operator	Auto-restart, hardware failover
+Database Connection Loss	Connection pooling, retry logic	Automatic reconnect
+Redis Failure	Local cache fallback	Replication, persistence
+Network Partition	Circuit breakers, graceful degradation	Automatic failover
+Disk Full	Monitoring, auto-cleanup, alerting	Manual intervention
+High CPU/Load	Autoscaling, rate limiting	Scale out
+Memory Leak	Restart policy, monitoring	Container restart
+Future Architecture Extensions
+Edge Computing
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Edge Deployment                                     │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐      │
+│  │                      Edge Node (Raspberry Pi)                     │      │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐                │      │
+│  │  │   SDR      │─▶│  Local     │─▶│  Detection │                │      │
+│  │  │ Capture    │  │ Processor  │  │  (Light)   │                │      │
+│  │  └────────────┘  └────────────┘  └─────┬──────┘                │      │
+│  │                                         │                         │      │
+│  │                                         ▼                         │      │
+│  │                              ┌────────────────────┐              │      │
+│  │                              │   MQTT/WebSocket   │──────────┐   │      │
+│  │                              │    (Compressed)    │          │   │      │
+│  │                              └────────────────────┘          │   │      │
+│  └──────────────────────────────────────────────────────────────┼───┘      │
+│                                                                  │          │
+│                                                                  ▼          │
+│                                                          Cloud / Data Center│
+└─────────────────────────────────────────────────────────────────────────────┘
+Multi-Region Deployment
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Multi-Region Architecture                           │
+│                                                                              │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐         │
+│  │   US-East         │  │    EU-West       │  │    AP-Southeast  │         │
+│  │  ┌────────────┐  │  │  ┌────────────┐  │  │  ┌────────────┐  │         │
+│  │  │ API x4     │  │  │  │ API x4     │  │  │  │ API x4     │  │         │
+│  │  │ Workers x8 │  │  │  │ Workers x8 │  │  │  │ Workers x8 │  │         │
+│  │  └────────────┘  │  │  └────────────┘  │  │  └────────────┘  │         │
+│  │  ┌────────────┐  │  │  ┌────────────┐  │  │  ┌────────────┐  │         │
+│  │  │ PostgreSQL │  │  │  │ PostgreSQL │  │  │  │ PostgreSQL │  │         │
+│  │  │  (Primary) │  │  │  │ (Replica)  │  │  │  │ (Replica)  │  │         │
+│  │  └────────────┘  │  │  └────────────┘  │  │  └────────────┘  │         │
+│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘         │
+│           │                     │                     │                    │
+│           └─────────────────────┼─────────────────────┘                    │
+│                                 │                                           │
+│                    ┌────────────▼────────────┐                             │
+│                    │    Global Load Balancer │                             │
+│                    │    (GeoDNS/Route53)      │                             │
+│                    └─────────────────────────┘                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+This architecture document serves as the authoritative reference for the Drone Detector system's design, guiding implementation decisions and ensuring consistency across the codebase.
