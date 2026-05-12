@@ -1,388 +1,361 @@
----
-name: 🔧 Hardware Issue
-about: Report hardware-related issues (SDR, antennas, USB, etc.)
-title: '[HARDWARE] '
-labels: hardware, bug, needs-triage
-assignees: ''
----
+# Pull Request Template
 
-## 🔧 Hardware Issue Description
+## 📋 Description
 
-<!-- A clear and concise description of the hardware issue. -->
+<!-- Provide a clear and concise description of the changes -->
 
-**Hardware Component:**
-- [ ] SDR Device (HackRF, RTL-SDR, Pluto, etc.)
-- [ ] Antenna
-- [ ] LNA (Low Noise Amplifier)
-- [ ] USB Connection/Cable
-- [ ] Power Supply
-- [ ] GPS/Clock Synchronization
+**Related Issue:** Fixes #(issue number)
+
+**Type of Change:**
+- [ ] 🐛 Bug fix (non-breaking change)
+- [ ] ✨ New feature (non-breaking change)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to change)
+- [ ] 📚 Documentation update
+- [ ] 🎨 Code refactor
+- [ ] ⚡ Performance improvement
+- [ ] 🔒 Security fix
+- [ ] 🧪 Test update
+- [ ] 🔧 Configuration change
+- [ ] 📦 Dependency update
+
+## 🎯 Scope of Changes
+
+<!-- Describe which components are affected -->
+
+**Affected Components:**
+- [ ] API Layer
+- [ ] Domain/Models
+- [ ] Infrastructure/Hardware
+- [ ] Signal Processing
+- [ ] ML/AI Models
+- [ ] Database
+- [ ] Frontend/UI
+- [ ] Documentation
+- [ ] CI/CD
+- [ ] Docker/Kubernetes
 - [ ] Other: ___________
 
-**Issue Type:**
-- [ ] Device not detected
-- [ ] Poor signal quality
-- [ ] Overheating
-- [ ] USB disconnection
-- [ ] Performance degradation
-- [ ] Physical damage
-- [ ] Driver/firmware issue
-- [ ] Other: ___________
+**Hardware Impact:**
+- [ ] HackRF One
+- [ ] RTL-SDR
+- [ ] ADALM-PLUTO
+- [ ] Mock Device
+- [ ] No hardware impact
 
-## 📊 Hardware Configuration
+## 🧪 Testing
 
-**SDR Device Details:**
-<!-- Run detection commands and paste output -->
+### Test Coverage
 
-<details>
-<summary>SDR Detection Output</summary>
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] Hardware tests added/updated (if applicable)
+- [ ] Performance benchmarks added/updated (if applicable)
+- [ ] E2E tests added/updated (if applicable)
+
+### Testing Commands
 
 ```bash
-# HackRF
-hackrf_info
+# Run specific tests (update as needed)
+pytest tests/path/to/test_file.py -v
 
-# RTL-SDR
-rtl_test -t
-rtl_eeprom -d 0
+# Run all tests
+pytest tests/ -v
 
-# ADALM-PLUTO
-iio_info -s
+# Run with coverage
+pytest --cov=app --cov-report=html
 
-# General USB
-lsusb
-lsusb -t
-dmesg | tail -50
-</details>
-Antenna Setup:
+# Run hardware tests (if applicable)
+pytest tests/hardware/ -v -m hardware
 
-Antenna Type: <!-- e.g., Discone, Log-periodic, Patch, Yagi -->
-
-Frequency Range: <!-- e.g., 2.4-2.5 GHz -->
-
-Antenna Gain: <!-- e.g., 5 dBi -->
-
-Cable Type: <!-- e.g., LMR-400, RG-58 -->
-
-Cable Length: <!-- e.g., 10 meters -->
-
-Mounting Location: <!-- e.g., Rooftop, Window, Indoor -->
-
-Height above ground: <!-- e.g., 15 meters -->
-
-Accessories:
-
-LNA (Gain: ___ dB)
-
-Bandpass Filter (Frequency: ___)
-
-USB Isolator
-
-Bias-Tee
-
-GPSDO (GPS Disciplined Oscillator)
-
-Cooling Fan/Heatsink
-
-Other: ___________
-
-Environmental Factors:
-
-Temperature: ___ °C / ___ °F
-
-Weather: ☀️ Clear / ☁️ Cloudy / 🌧️ Rain / ❄️ Snow
-
-Interference sources nearby: <!-- e.g., WiFi routers, cell towers, microwave ovens -->
-
-🔄 Steps to Reproduce
-<!-- Steps to reproduce the hardware issue: -->
-Connect hardware as described
-
-Run command: __________
-
-Observe behavior
-
-📊 Observed Behavior
-Symptoms:
-
-<!-- Describe what you're experiencing -->
-Error Messages:
-
+# Run performance tests (if applicable)
+pytest tests/performance/ -v --benchmark-only
+Test Results
+<!-- Paste relevant test output here -->
 text
-<!-- Paste any error messages here -->
-LED Status:
+Paste test results showing all tests pass
+📊 Quality Checks
+Code Quality
+Code follows project style guide (PEP 8)
 
-Power LED: [ ] On / [ ] Off / [ ] Blinking
+Formatted with Black (black .)
 
-Activity LED: [ ] On / [ ] Off / [ ] Blinking
+Imports sorted with isort (isort .)
 
-Other LEDs: ___________
+Linted with flake8 (flake8 .)
 
-Signal Quality Metrics:
+Type checked with mypy (mypy app/)
 
-bash
-# Run these commands and paste output (if possible)
+Security scanned with bandit (bandit -r app/)
 
-# Signal strength
-hackrf_sweep -f 2400:2500 -n 10
+Docstrings added for new functions/classes
 
-# Noise floor
-rtl_power -f 2400M:2500M:1M -g 20 -i 1 -1 noise_measurement.csv
+Comments added for complex logic
 
-# Sample drops
-# For HackRF:
-hackrf_transfer -r /dev/null -s 20000000 -n 100000000 2>&1 | grep -i "drop"
-
-# For RTL-SDR:
-rtl_test -t 2>&1 | grep -i "lost"
-📈 Expected Behavior
-<!-- What should happen instead? -->
-Expected Signal Characteristics:
-
-Expected SNR: ___ dB
-
-Expected noise floor: ___ dBm
-
-Expected temperature: ___ °C
-
-🏗️ System Environment
-Operating System:
+Performance Impact
+<!-- Describe any performance implications -->
+Benchmark Results (if applicable):
 
 bash
-uname -a
-cat /etc/os-release
-Drivers and Firmware:
+# Before change:
+# [Insert baseline benchmark results]
 
-bash
-# Driver versions
-modinfo hackrf
-modinfo rtl2832
+# After change:
+# [Insert new benchmark results]
 
-# Firmware versions
-hackrf_info | grep "Firmware"
-rtl_eeprom -d 0 | grep "Firmware"
-USB Configuration:
+# Performance change: +/- ___%
+Security Considerations
+No hardcoded secrets/credentials
 
-bash
-# USB bus information
-lsusb -t
-cat /sys/kernel/debug/usb/devices | grep -A 10 "HackRF"
-🩺 Diagnostic Tests Performed
-<!-- Check all that apply and provide results -->
-Basic connectivity test
+Input validation implemented
 
-bash
-# Results:
-Signal test with known source
+Authentication/authorization considered (if API changes)
 
-bash
-# Results:
-Temperature monitoring
+Sensitive data properly encrypted (if storage changes)
 
-bash
-# Results (temperature over time):
-USB bandwidth test
+Security headers updated (if web changes)
 
-bash
-# Results:
-Different USB port/cable test
+Dependencies scanned for vulnerabilities
 
-<!-- What happened? -->
-Different antenna test
+📝 Documentation
+Documentation Updates
+README.md updated
 
-<!-- What happened? -->
-LNA bypass test (if applicable)
+API documentation updated (if API changes)
 
-<!-- What happened? -->
-Mock mode test (software-only)
+Configuration documentation updated
 
-bash
-export USE_MOCK_HARDWARE=true
-# Results:
-🔧 Troubleshooting Attempted
-<!-- What have you tried to fix the issue? -->
-Restarted SDR device
+Hardware setup guide updated (if hardware changes)
 
-Reconnected USB cable
+User guide updated
 
-Changed USB port
+Architecture docs updated
 
-Restarted computer
+CHANGELOG.md updated
 
-Updated drivers
+Migration guide added (if breaking change)
 
-Updated firmware
+Code Documentation
+python
+# Example of new function docstring (if applicable)
+def new_function(param1: str, param2: int) -> bool:
+    """
+    Brief description of what this function does.
 
-Changed antenna
+    Longer description explaining the purpose and any important
+    implementation details.
 
-Added/removed LNA
+    Args:
+        param1: Description of param1
+        param2: Description of param2
 
-Changed gain settings
+    Returns:
+        Description of return value
 
-Changed frequency
+    Raises:
+        ValueError: When invalid input is provided
 
-Reduced sample rate
+    Example:
+        >>> result = new_function("test", 42)
+        >>> print(result)
+        True
+    """
+    pass
+🔄 Migration Notes
+<!-- If this is a breaking change, describe migration steps -->
+Breaking Changes:
 
-Added USB isolator
+Change 1: [Description and migration steps]
 
-Added cooling
+Change 2: [Description and migration steps]
 
-Other: ___________
+Database Migrations:
 
-Results of troubleshooting:
+New migration created (alembic revision -m "description")
 
-<!-- What happened after each attempt? -->
-📸 Photos/Videos
-<!-- If applicable, add photos of your hardware setup, LED status, or screenshots -->
-📋 Configuration
-<details> <summary>Hardware Configuration (config/hardware.yaml)</summary>
+Migration tested (upgrade and downgrade)
+
+Migration is reversible
+
+Configuration Changes:
+
 yaml
-# Paste your hardware configuration here (redact sensitive info)
-</details>
-📎 Additional Context
-<!-- Any other relevant information -->
-When did the issue start? <!-- e.g., After update, after hardware change, always -->
+# Old configuration (if applicable)
+# ...
 
-Does it happen consistently? <!-- Always / Sometimes / Rarely -->
+# New configuration
+# ...
+📦 Dependency Changes
+<!-- List any new or updated dependencies -->
+New Dependencies:
 
-Does it happen with different software? <!-- e.g., SDR#, GQRX, other tools -->
+Package	Version	Reason	License
+example	1.0.0	Needed for X	MIT
+Updated Dependencies:
 
-Any recent changes to the environment? <!-- e.g., New equipment, moved antenna -->
+Package	Old Version	New Version	Reason
+example	1.0.0	2.0.0	Security fix
+Removed Dependencies:
 
-✅ Checklist
-I have searched for existing hardware issues (including closed)
+Package	Reason
+example	No longer needed
+🖥️ Testing Environment
+Local Test Environment:
 
-I have checked the hardware setup guide
+OS: <!-- e.g., Ubuntu 22.04, macOS 14, Windows 11 -->
 
-I have tested with mock mode (software-only)
+Python Version: <!-- e.g., 3.11.5 -->
 
-I have tried basic troubleshooting steps
+Hardware: <!-- e.g., HackRF One, or N/A -->
 
-I have included diagnostic output
+Docker Version: <!-- if applicable -->
 
-I have described my hardware configuration
+Tested Configurations:
 
-I have provided steps to reproduce
+Development (mock hardware)
 
-I have attached photos if relevant
+Docker Compose
 
-🚦 Severity Assessment
-Critical: Hardware non-functional, system cannot operate
+Kubernetes (if applicable)
 
-High: Major performance degradation, frequent issues
+Bare metal (if applicable)
 
-Medium: Intermittent issues, reduced performance
+Production mode
 
-Low: Minor inconvenience, rare occurren ced
+📸 Screenshots
+<!-- If UI changes, add screenshots -->
+Before:
+https://link-to-before-screenshot
 
-📞 Contact for Follow-up
-Can we contact you for more information?
+After:
+https://link-to-after-screenshot
 
-Discord: @username
+✅ PR Checklist
+<!-- Ensure all items are checked before requesting review -->
+Author Checklist
+I have read the contributing guidelines
 
-GitHub: @username
+My code follows the project's style guidelines
 
-Email: (only if comfortable)
+I have performed a self-review of my code
 
-<!-- Hardware issues often require detailed information. Please provide as much detail as possible to help us diagnose and fix the issue. -->
+I have commented my code, particularly in hard-to-understand areas
+
+I have made corresponding changes to the documentation
+
+My changes generate no new warnings
+
+I have added tests that prove my fix is effective or that my feature works
+
+New and existing unit tests pass locally with my changes
+
+Any dependent changes have been merged and published
+
+I have checked my code for security vulnerabilities
+
+I have updated the CHANGELOG.md
+
+I have considered backward compatibility
+
+I have added migration guides for breaking changes
+
+Reviewer Checklist
+Code is well-written and follows standards
+
+Tests are comprehensive and meaningful
+
+Documentation is accurate and complete
+
+Security implications considered
+
+Performance impact evaluated
+
+Edge cases handled
+
+No blocking issues found
+
+🚀 Deployment Notes
+Deployment Steps (if special handling required):
+
+Rollback Plan:
+
+<!-- Describe how to rollback if deployment fails -->
+Monitoring After Deployment:
+
+Check health endpoint: curl http://localhost:8888/health
+
+Monitor error rates for 1 hour
+
+Watch for hardware issues
+
+Verify detection pipeline
+
+📞 Additional Information
+<!-- Any additional information that might be useful for reviewers -->
+Discussion / RFC: [Link to discussion]
+
+Related PRs: #(PR numbers)
+
+Testing Notes:
+
+<!-- Any specific testing instructions for reviewers -->
+🎉 Thank You!
+Thank you for contributing to the Drone Detector System! Your efforts help make drone airspace safer for everyone.
+
+<!-- Note to reviewers: Please ensure the author has completed all relevant sections. For small changes (typos, minor docs), you can skip some sections. -->
 text
 
-Here's also a `config.yml` for issue templates (if not already created):
+This pull request template provides:
 
-```yaml
-# .github/ISSUE_TEMPLATE/config.yml
-blank_issues_enabled: false
-contact_links:
-  - name: 📚 Hardware Setup Guide
-    url: https://docs.drone-detector.com/hardware_setup
-    about: Check the hardware setup guide first
-  - name: 🔧 Troubleshooting Guide
-    url: https://docs.drone-detector.com/troubleshooting#hardware
-    about: Common hardware issues and solutions
-  - name: 💬 Discord Community
-    url: https://discord.gg/drone-detector
-    about: Get help from the community
-  - name: 📖 SDR Documentation
-    url: https://docs.drone-detector.com/sdr
-    about: SDR-specific documentation
-  - name: 🛒 Hardware Recommendations
-    url: https://docs.drone-detector.com/hardware#recommendations
-    about: Recommended hardware and vendors
-This hardware issue template provides:
+1. **Comprehensive Structure**:
+   - Clear description and issue linking
+   - Change type classification
+   - Scope of changes with component checkboxes
+   - Hardware impact assessment
 
-Hardware-Specific Sections:
+2. **Testing Section**:
+   - Test coverage checklist
+   - Commands to run specific tests
+   - Results placeholder
+   - Support for unit, integration, hardware, performance, E2E tests
 
-Component identification (SDR, antenna, LNA, etc.)
+3. **Quality Checks**:
+   - Code quality tools (Black, isort, flake8, mypy, bandit)
+   - Performance impact assessment
+   - Security considerations checklist
 
-Issue type classification
+4. **Documentation**:
+   - Documentation update checklist
+   - Code docstring example
+   - Migration notes for breaking changes
 
-Detailed configuration collection
+5. **Dependency Management**:
+   - New, updated, and removed dependencies
+   - License information
+   - Reason for changes
 
-Diagnostic Commands:
+6. **Testing Environment**:
+   - Local environment details
+   - Tested configurations
+   - OS, Python, hardware versions
 
-SDR detection commands for all devices
+7. **Screenshots**:
+   - Before/after comparison
+   - For UI or visualization changes
 
-USB diagnostics
+8. **Checklists**:
+   - Author checklist (pre-review)
+   - Reviewer checklist (during review)
+   - Ensures thorough review
 
-Signal quality metrics
+9. **Deployment Notes**:
+   - Special deployment steps
+   - Rollback plan
+   - Monitoring instructions
+   - Health check verification
 
-Temperature monitoring
+10. **Additional Information**:
+    - Links to discussions/RFCs
+    - Related PRs
+    - Special testing instructions
 
-Environmental Factors:
-
-Temperature and weather conditions
-
-Interference sources
-
-Mounting location details
-
-Antenna Configuration:
-
-Type, gain, cable specs
-
-Mounting height and location
-
-Accessories used
-
-Troubleshooting Steps:
-
-Comprehensive checklist of attempted fixes
-
-Results tracking
-
-Systematic approach
-
-Performance Metrics:
-
-SNR measurements
-
-Noise floor readings
-
-Sample drop analysis
-
-Temperature data
-
-USB Configuration:
-
-Bus information
-
-Bandwidth testing
-
-Cable/port testing
-
-Software Comparison:
-
-Test with other SDR software
-
-Mock mode validation
-
-Driver version verification
-
-Visual Documentation:
-
-Photos of hardware setup
-
-LED status indicators
-
-Screenshots of issues
-
-This template helps hardware issues get properly diagnosed by collecting all the necessary information about the physical setup, environmental factors, and diagnostic test results.
+The template is comprehensive but allows reviewers to skip sections for small changes (typos, minor docs). It ensures consistent, high-quality pull requests that are well-tested and documented.
