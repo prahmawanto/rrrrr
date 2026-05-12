@@ -1,204 +1,412 @@
 ---
-name: 🐛 Bug Report
-about: Report a bug to help us improve the Drone Detector System
-title: '[BUG] '
-labels: bug, needs-triage
+name: ✨ Feature Request
+about: Suggest an idea or enhancement for the Drone Detector System
+title: '[FEATURE] '
+labels: enhancement, needs-triage
 assignees: ''
 
 ---
 
-## 🐛 Bug Description
+## 🎯 Problem Statement
 
-<!-- A clear and concise description of what the bug is. -->
+<!-- Is your feature request related to a problem? Please provide a clear description. -->
+**What problem would this feature solve?**
+<!-- Ex. I'm always frustrated when [...] -->
 
-**Expected behavior:**
-<!-- What did you expect to happen? -->
+**Who would benefit from this feature?**
+<!-- e.g., Security operators, system administrators, developers, etc. -->
 
-**Actual behavior:**
-<!-- What actually happened? -->
+## 💡 Proposed Solution
 
-**Screenshots/Logs:**
-<!-- If applicable, add screenshots or logs to help explain your problem. -->
+**Describe the solution you'd like**
+<!-- A clear and concise description of what you want to happen. -->
 
-## 🔄 Steps to Reproduce
+**Describe alternatives you've considered**
+<!-- A clear and concise description of any alternative solutions or features you've considered. -->
 
-<!-- Steps to reproduce the behavior: -->
-1. Run command '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## 🎨 User Experience
 
-## 📋 Environment
+**How would users interact with this feature?**
+<!-- Describe the user interaction flow. Include UI mockups if applicable. -->
 
-**Drone Detector Version:**
-<!-- e.g., v1.0.0, or commit hash -->
+**Example use case:**
+```python
+# Example code showing how the feature might be used
+from drone_detector import DetectionSystem
 
-**Deployment Method:**
-- [ ] Docker Compose
-- [ ] Kubernetes
-- [ ] Bare Metal
-- [ ] Development
+# Proposed API usage
+system = DetectionSystem()
+result = system.new_feature()
+📊 Use Cases
+<!-- Describe specific use cases where this feature would be valuable -->
+Use Case 1:
+Scenario:
+Current behavior:
+Desired behavior:
+Impact:
 
-**Operating System:**
-<!-- e.g., Ubuntu 22.04, Windows 11, macOS 14 -->
+Use Case 2:
+Scenario:
+Current behavior:
+Desired behavior:
+Impact:
 
-**Python Version:**
-<!-- e.g., 3.11.5 -->
+🔬 Technical Details
+Proposed Implementation:
 
-**SDR Hardware:**
-<!-- e.g., HackRF One, RTL-SDR v3, ADALM-PLUTO, or None for mock mode -->
+<!-- If you have ideas on how to implement this, please share -->
+Dependencies:
 
-## 📊 System Information
+<!-- List any new dependencies or system requirements -->
+New Python packages:
 
-<details>
-<summary>System Details</summary>
+New system libraries:
 
-```bash
-# Run these commands and paste output:
+New hardware requirements:
 
-# OS Information
-uname -a
-cat /etc/os-release
+API changes:
 
-# Python version
-python --version
-pip --version
+Database schema changes:
 
-# Docker version (if applicable)
-docker --version
-docker-compose --version
+Breaking Changes:
 
-# SDR device info
-hackrf_info 2>/dev/null || rtl_test -t 2>/dev/null || echo "No SDR detected"
+<!-- Will this feature break existing functionality? If so, how? -->
+🚀 Benefits
+<!-- List the benefits of implementing this feature -->
+Benefit	Impact (High/Medium/Low)	Description
+1.		
+2.		
+3.		
+📈 Success Metrics
+<!-- How would we measure the success of this feature? -->
+Performance improvement: _______%
 
-# Memory and CPU
-free -h
-nproc
-</details>
-🔍 Logs
-<details> <summary>Relevant Logs</summary>
-bash
-# Paste relevant logs here (API logs, worker logs, etc.)
-# For Docker deployments:
-docker-compose logs --tail=100
+User satisfaction increase: _______%
 
-# For bare metal:
-tail -100 /var/log/drone-detector/system.log
-tail -100 /var/log/drone-detector/api.log
-</details>
-⚙️ Configuration
-<details> <summary>Configuration (redact sensitive data)</summary>
-yaml
-# Paste relevant configuration (config/system.yaml, .env, etc.)
-# Remove passwords, API keys, and other sensitive information
-</details>
+Reduction in manual effort: _______%
+
+Other: _______
+
+🗺️ Roadmap Consideration
+Priority:
+
+Critical (must have)
+
+High (important)
+
+Medium (nice to have)
+
+Low (future consideration)
+
+Timeline expectations:
+
+<!-- e.g., within 1 month, next quarter, not time-sensitive -->
+Effort estimate:
+
+Small (1-3 days)
+
+Medium (1-2 weeks)
+
+Large (1 month)
+
+Epic (multiple months)
+
+🔍 Research & Inspiration
+<!-- Have you seen this feature in other projects? Share links or examples -->
+Similar implementations:
+
+Project Name - How they solved it
+
+Project Name - Alternative approach
+
+Relevant documentation:
+
+[Link to docs or papers]
+
+[Link to RFC or standards]
+
 📎 Additional Context
-<!-- Add any other context about the problem here, such as frequency of occurrence, recent changes, etc. -->
-🩺 Diagnostic Information
-bash
-# Run diagnostic script and paste output:
-python scripts/diagnostics.py
-🚦 Severity Assessment
-Critical: System crash, data loss, security breach
+<!-- Add any other context, screenshots, or mockups about the feature request here -->
+Attachments:
 
-High: Major feature broken, significant performance degradation
-
-Medium: Feature partially broken, annoying bug
-
-Low: Minor issue, documentation error
-
-🔬 Possible Cause/Solution
-<!-- If you have any idea what might be causing the issue or how to fix it, please share. -->
+<!-- You can drag and drop images, diagrams, or other files here -->
 ✅ Checklist
-I have searched for similar issues (including closed ones)
+I have searched for existing feature requests (including closed)
 
-I have updated to the latest version
+I have checked the documentation for existing functionality
 
-I have provided clear steps to reproduce
+I have considered the impact on existing users
 
-I have included relevant logs and configuration
+I have provided clear use cases and benefits
 
-I have run the diagnostic script
+I have suggested a potential implementation approach
 
-I have checked the troubleshooting guide
+I have identified any breaking changes
 
-📞 Additional Contact
-<!-- Optional: How can we contact you for more information? -->
+I have added relevant examples
+
+I have indicated priority and timeline expectations
+
+🤝 Contribution
+<!-- Would you be willing to contribute to implementing this feature? -->
+Yes, I would like to work on this feature
+
+I would need guidance but am interested
+
+No, but I would help test
+
+No, I'm just suggesting the idea
+
+<!-- If you're willing to contribute, please share your experience level: - Python: [Beginner/Intermediate/Expert] - SDR/Radio: [Beginner/Intermediate/Expert] - ML/AI: [Beginner/Intermediate/Expert] - Web/API: [Beginner/Intermediate/Expert] - Docker/K8s: [Beginner/Intermediate/Expert] -->
+📞 Follow-up
+Can we contact you for more information?
+
 Discord: @username
+
+GitHub: @username
 
 Email: (only if you're comfortable sharing)
 
+<!-- Note: This template helps us understand feature requests better. Fill in as much detail as possible to help maintainers evaluate the request. -->
 text
 
-Here's also a `config.yml` for the issue templates (optional but helpful):
+Here's also a `feature_request.yml` (YAML form-based version) as an alternative:
 
 ```yaml
-# .github/ISSUE_TEMPLATE/config.yml
-blank_issues_enabled: false
-contact_links:
-  - name: 📚 Documentation
-    url: https://docs.drone-detector.com
-    about: Check the documentation before opening an issue
-  - name: 💬 Discord Community
-    url: https://discord.gg/drone-detector
-    about: Ask questions and discuss with the community
-  - name: ❓ GitHub Discussions
-    url: https://github.com/drone-detector/drone-detector/discussions
-    about: Ask questions and share ideas
-  - name: 📖 Troubleshooting Guide
-    url: https://docs.drone-detector.com/troubleshooting
-    about: Common issues and solutions
-  - name: 🔒 Security Issue
-    url: https://github.com/drone-detector/drone-detector/security/policy
-    about: Please report security vulnerabilities here
-This bug report template provides:
+# .github/ISSUE_TEMPLATE/feature_request.yml
+name: "✨ Feature Request"
+description: "Suggest an idea or enhancement for the Drone Detector System"
+title: "[FEATURE]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✨ Feature Request
+        Thanks for taking the time to suggest a feature! Please fill out the form below.
+        
+  - type: textarea
+    id: problem
+    attributes:
+      label: 🎯 Problem Statement
+      description: What problem would this feature solve?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+      
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: Describe the solution you'd like
+      placeholder: "I would like to have..."
+    validations:
+      required: true
+      
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternatives Considered
+      description: What alternatives have you considered?
+      placeholder: "I've also thought about..."
+      
+  - type: textarea
+    id: use_cases
+    attributes:
+      label: 📊 Use Cases
+      description: Describe specific use cases
+      placeholder: |
+        Use Case 1:
+        - Scenario: 
+        - Current behavior:
+        - Desired behavior:
+    validations:
+      required: true
+      
+  - type: textarea
+    id: technical_details
+    attributes:
+      label: 🔬 Technical Details
+      description: Any implementation ideas or technical considerations?
+      placeholder: "This could be implemented by..."
+      
+  - type: checkboxes
+    id: dependencies
+    attributes:
+      label: 📦 Dependencies
+      options:
+        - label: New Python packages required
+        - label: New system libraries required
+        - label: New hardware requirements
+        - label: API changes needed
+        - label: Database schema changes needed
+        - label: Breaking changes
+          
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🚦 Priority
+      description: What priority would you assign?
+      options:
+        - Critical (must have)
+        - High (important)
+        - Medium (nice to have)
+        - Low (future consideration)
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: effort
+    attributes:
+      label: 💪 Effort Estimate
+      options:
+        - Small (1-3 days)
+        - Medium (1-2 weeks)
+        - Large (1 month)
+        - Epic (multiple months)
+        
+  - type: textarea
+    id: benefits
+    attributes:
+      label: 🚀 Benefits
+      description: What are the benefits of this feature?
+      placeholder: |
+        - Benefit 1: 
+        - Benefit 2:
+        
+  - type: textarea
+    id: metrics
+    attributes:
+      label: 📈 Success Metrics
+      description: How would we measure success?
+      placeholder: |
+        - Performance improvement: 
+        - User satisfaction increase:
+        
+  - type: textarea
+    id: inspiration
+    attributes:
+      label: 🔍 Research & Inspiration
+      description: Have you seen this in other projects?
+      placeholder: "Similar implementation in: [project](link)"
+      
+  - type: textarea
+    id: context
+    attributes:
+      label: 📎 Additional Context
+      description: Any other context, screenshots, or mockups?
+      placeholder: "Drag and drop images here"
+      
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ Checklist
+      options:
+        - label: I have searched for existing feature requests
+          required: true
+        - label: I have checked the documentation
+          required: true
+        - label: I have considered the impact on existing users
+          required: true
+        - label: I have provided clear use cases
+          required: true
+          
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Would you be willing to contribute?
+      options:
+        - Yes, I would like to work on this
+        - I would need guidance but am interested
+        - Yes, I would help test
+        - No, I'm just suggesting the idea
+        
+  - type: input
+    id: discord
+    attributes:
+      label: 📞 Discord Username (optional)
+      placeholder: "@username"
+      
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        Thank you for your feature request! We'll review it as soon as possible.
+This feature request template provides:
 
-Structured Sections:
+Problem Statement:
 
-Clear bug description with expected/actual behavior
+Clear problem articulation
 
-Steps to reproduce
+Identification of who would benefit
 
-Environment information
+Proposed Solution:
 
-System Information:
+Detailed solution description
 
-Version and deployment method
+Alternative approaches
 
-Operating system and Python version
+Example code/API usage
 
-SDR hardware details
+Use Cases:
 
-Diagnostic Tools:
+Specific scenarios with current vs desired behavior
 
-Commands to collect system info
+Impact assessment per use case
 
-Log collection instructions
+Technical Details:
 
-Diagnostic script output
+Implementation approach
 
-Configuration:
+Dependencies (packages, libraries, hardware)
 
-Collapsible sections for logs and config
+Breaking change identification
 
-Reminder to redact sensitive data
+Benefits & Metrics:
 
-Severity Assessment:
+Tabulated benefits with impact levels
 
-Self-assessment of impact level
+Success metrics for evaluation
 
-Helps with prioritization
+Roadmap Considerations:
+
+Priority selection (Critical to Low)
+
+Effort estimation
+
+Timeline expectations
+
+Research References:
+
+Similar implementations in other projects
+
+Relevant documentation or standards
+
+Contribution Intent:
+
+Willingness to implement
+
+Experience level assessment
+
+Testing commitment
 
 Checklist:
 
-Ensures users have tried basic troubleshooting
+Ensures thorough preparation
 
-Promotes quality bug reports
+Promotes quality feature requests
 
-Additional Resources:
+The template helps maintainers:
 
-Links to documentation, Discord, discussions
+Understand the real problem users face
 
-Security reporting instructions
+Evaluate feasibility and effort
 
-The template guides users to provide comprehensive information that helps maintainers quickly understand, reproduce, and fix issues.
+Prioritize based on impact and benefits
+
+Identify potential contributors
+
+Plan roadmap accordingly
+
+The YAML version provides a more structured, form-based approach that can be easier for users to fill out while ensuring consistent data collection.
